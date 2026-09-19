@@ -5,49 +5,26 @@
    the panel is a column beside the shop, so you can watch it act; on a
    narrower one it floats over the corner. Tokens come from styles.css. */
 
-/* ---------- The orb ---------- */
-.orb {
+/* ---------- The voice visualizer ---------- */
+/* Its colours, left to right: leafy greens through to carrot. The shader reads
+   these off the canvas, and the still drawing uses them as they are. */
+.visualizer {
+  --wave-1: #0a9c8a;
+  --wave-2: var(--brand);
+  --wave-3: #8fc93a;
+  --wave-4: #ffc533;
+  --wave-5: var(--carrot);
   position: relative;
   flex-shrink: 0;
 }
 
-.orb-canvas {
-  position: relative;
+.visualizer svg,
+.visualizer canvas {
+  position: absolute;
+  inset: 0;
   display: block;
   inline-size: 100%;
   block-size: 100%;
-}
-
-/* Until three.js arrives, and wherever WebGL is missing. */
-.orb-canvas.loading,
-.orb-canvas.fallback {
-  border-radius: 50%;
-  opacity: 0.85;
-  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--brand) 40%, #fff), var(--brand) 60%, var(--kale));
-}
-
-.orb-halo {
-  position: absolute;
-  inset-inline-start: 50%;
-  inset-block-start: 50%;
-  inline-size: 160%;
-  block-size: 160%;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle, var(--brand-soft) 0%, transparent 68%);
-  pointer-events: none;
-}
-
-.orb-floor {
-  position: absolute;
-  inset-inline-start: 50%;
-  inset-block-end: -10%;
-  inline-size: 70%;
-  block-size: 14%;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse, rgb(36 37 41 / 0.14), transparent 70%);
-  pointer-events: none;
 }
 
 /* ---------- The launcher ---------- */
@@ -70,7 +47,7 @@
   align-items: center;
   gap: 10px;
   block-size: 44px;
-  padding: 0 14px 0 9px;
+  padding: 0 14px 0 12px;
   border: 0;
   border-radius: 999px;
   background: var(--surface);

@@ -90,7 +90,7 @@ function fromBase64(b64) {
   return out;
 }
 
-/** An analyser sized for loudness readings a frame at a time: 1024 samples, 64 ms of microphone or 43 ms of speech. */
+/** An analyser sized for a reading a frame at a time: 1024 samples, 64 ms of microphone or 43 ms of speech. */
 function tap(ctx) {
   const node = ctx.createAnalyser();
   node.fftSize = 1024;
@@ -114,7 +114,7 @@ export class GeminiLiveClient {
   mic = null;
   processor = null;
   micWanted = false;
-  /** Taps on the microphone and the speaker, for the orb to read loudness from. */
+  /** Taps on the microphone and the speaker, for the visualizer to draw from. */
   micTap = null;
   voiceTap = null;
 
@@ -421,7 +421,7 @@ export class GeminiLiveClient {
   outputContext() {
     if (!this.outputCtx) {
       this.outputCtx = new AudioContext({ sampleRate: OUT_RATE });
-      // Everything played goes through the tap on its way out, so the orb can move to the voice.
+      // Everything played goes through the tap on its way out, so the visualizer can draw the voice.
       this.voiceTap = tap(this.outputCtx);
       this.voiceTap.connect(this.outputCtx.destination);
     }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import Orb from "./Orb.jsx";
+import Visualizer from "./Visualizer.jsx";
 import AssistantSettings from "./AssistantSettings.jsx";
 import { GeminiLiveClient } from "./geminiLive.js";
 import { applyUndo, canUndo } from "./tools.js";
@@ -273,7 +273,7 @@ export default function Assistant() {
                 ? "Connected"
                 : "Ready";
   const empty = messages.length === 0 && !modelDraft && !userDraft;
-  // What the orb moves to: the shopper while listening, the model while it speaks aloud; otherwise its own motion.
+  // What the visualizer draws: the shopper while listening, the model while it speaks aloud; otherwise its own motion.
   const voice =
     mode === "listening"
       ? (clientRef.current?.micAnalyser ?? null)
@@ -285,7 +285,7 @@ export default function Assistant() {
     return (
       <>
         <button type="button" className="assistant-launcher" title="Ask or say something (⌘J)" onClick={() => setAssistantOpen(true)}>
-          <Orb size={26} still />
+          <Visualizer width={30} height={22} still />
           <span>Ask or say…</span>
           <kbd aria-hidden="true">⌘J</kbd>
         </button>
@@ -306,7 +306,7 @@ export default function Assistant() {
         }}
       >
         <header className="assistant-head">
-          <Orb size={22} mode={mode} voice={voice} />
+          <Visualizer width={30} height={22} mode={mode} voice={voice} />
           <span className={`assistant-status${status === "error" ? " error" : ""}`} role="status">
             {statusLabel}
           </span>
@@ -353,7 +353,7 @@ export default function Assistant() {
           {empty ? (
             <>
               <div className="assistant-hero">
-                <Orb size={120} mode={mode} voice={voice} halo />
+                <Visualizer width={288} height={96} mode={mode} voice={voice} />
                 <h2>Say it or type it.</h2>
                 <p>It shops the page the way you would.</p>
               </div>
@@ -411,7 +411,7 @@ export default function Assistant() {
                 title={micOn ? "Stop listening" : "Talk"}
                 onClick={toggleMic}
               >
-                {micOn ? <Orb size={30} mode={mode} voice={voice} /> : <Icon d={MIC} size={18} weight={1.6} />}
+                {micOn ? <Visualizer width={30} height={26} mode={mode} voice={voice} /> : <Icon d={MIC} size={18} weight={1.6} />}
               </button>
             </div>
           ) : (

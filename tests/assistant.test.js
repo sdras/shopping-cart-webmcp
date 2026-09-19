@@ -8,7 +8,7 @@ import { registerLocalTool, localTools } from "../src/tools/registry.js";
 import { toolDefinitions, functionDeclarations, geminiSchema, runTool, canUndo, applyUndo } from "../src/assistant/tools.js";
 import { systemInstruction } from "../src/assistant/geminiLive.js";
 import { TurnTracker, briefDescription, stripControl } from "../src/assistant/geminiText.js";
-import { createVoiceMeter } from "../src/assistant/voiceLevel.js";
+import { VOICE_BANDS, bandShape, createVoiceMeter } from "../src/assistant/voiceLevel.js";
 
 const NOW = new Date(2026, 8, 15, 14, 30);
 
@@ -265,5 +265,45 @@ describe("voice meter", () => {
       expect(level).toBeGreaterThanOrEqual(0);
       expect(level).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe("voice bands", () => {
+  // An analyser on the 16 kHz microphone: 512 bins, 15.625 Hz each.
+  const RATE = 16000;
+  const BINS = 512;
+  const spectrum = (fill, peaks = {}) => {
+    const bytes = new Uint8Array(BINS).fill(fill);
+    for (const [hz, value] of Object.entries(peaks)) bytes[Math.round(hz / (RATE / 2 / BINS))] = value;
+    return bytes;
+  };
+
+  it("has one band fewer than it has edges, low to high", () => {
+    expect(bandShape(spectrum(0), RATE)).toHaveLength(VOICE_BANDS.length - 1);
+    expect([...VOICE_BANDS]).toEqual([...VOICE_BANDS].sort((a, b) => a - b));
+  });
+
+  it("puts a tone in the band that holds it", () => {
+    const shape = bandShape(spectrum(0, { 500: 255 }), RATE); // 400–650 Hz is the fourth band
+    expect(shape.indexOf(Math.max(...shape))).toBe(3);
+    expect(shape[3]).toBe(1);
+    expect(shape[0]).toBe(0);
+  });
+
+  it("is about shape, not loudness: the same sound quieter reads the same", () => {
+    const loud = bandShape(spectrum(40, { 200: 240, 1200: 160 }), RATE);
+    const quiet = bandShape(spectrum(20, { 200: 120, 1200: 80 }), RATE);
+    for (let i = 0; i < loud.length; i++) expect(quiet[i]).toBeCloseTo(loud[i], 5);
+  });
+
+  it("is flat for an even hiss, and all zero for silence", () => {
+    expect([...bandShape(spectrum(90), RATE)]).toEqual(Array(VOICE_BANDS.length - 1).fill(1));
+    expect([...bandShape(spectrum(0), RATE)]).toEqual(Array(VOICE_BANDS.length - 1).fill(0));
+  });
+
+  it("copes with an analyser too coarse to reach the top bands", () => {
+    // 8 bins at 8 kHz: 500 Hz each, so several bands share a bin and none may read past the end.
+    const shape = bandShape(new Uint8Array(8).fill(100), 8000);
+    for (const v of shape) expect(Number.isFinite(v)).toBe(true);
   });
 });

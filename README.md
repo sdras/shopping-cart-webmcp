@@ -169,8 +169,14 @@ It has no tools of its own, and that's the point:
   up under 🤖 **Agent tools** like anyone else's. On a wide window the panel sits beside the shop
   rather than on top of it.
 
-The orb is three.js, loaded on demand and only once the page is idle, with a CSS stand-in until
-then and wherever WebGL is missing.
+The voice visualizer is one three.js quad with everything in the fragment shader: four
+translucent layers of mirrored wave, tapering to a centre line, in greens through to carrot. It
+draws what it hears. An `AnalyserNode` on the microphone or the speaker is cut into eight voice
+bands, low in the middle and high at the tips, so a vowel swells the centre and an "s" flickers
+at the ends; with nothing to hear it breathes (idle) or ripples outward (thinking). three.js only
+loads when the panel first opens. The launcher is the same picture as plain SVG, which also
+stands in wherever WebGL is missing. With reduced motion the layers hold still and only a real
+voice moves them.
 
 ## How it's put together
 
@@ -186,7 +192,7 @@ src/
     registry.js      the same live tools, by name, for the built-in assistant
     addressTool.js   the address form's schema, for whoever can't read the form
     ShoppingTools.jsx, CheckoutTools.jsx
-  assistant/     voice and chat: Gemini Live client, tool runner + undo, panel, orb
+  assistant/     voice and chat: Gemini Live client, tool runner + undo, panel, voice visualizer
   components/, pages/
 skills/          the grocery-staples agent skill and its WebMCP bridge
 tests/           handler, definition, and cross-tab tests (Vitest, no browser needed)
