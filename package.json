@@ -15,6 +15,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.0",
+    "three": "^0.186.0",
     "use-webmcp-tool": "^0.3.0"
   },
   "devDependencies": {

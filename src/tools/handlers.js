@@ -15,6 +15,8 @@ import {
 import { cartTotals, parseTip, DEFAULT_TIP } from "../lib/pricing.js";
 import { getDeliveryWindows, findDeliveryWindow } from "../lib/deliveryWindows.js";
 import { repeatPurchases } from "../lib/staples.js";
+import { recipes } from "../data/recipes.js";
+import { planRecipe, buildCustomRecipe, ingredientWords } from "../lib/recipes.js";
 import { money, plural } from "../lib/format.js";
 import {
   MAX_QUANTITY,
@@ -27,6 +29,9 @@ import {
   replaceStaples,
   setSubstitution,
   topUpStaples,
+  notePantry,
+  applyRecipePlan,
+  saveCustomRecipe,
   saveAddress,
   placeOrder as commitOrder,
   isAddressComplete,
@@ -242,12 +247,15 @@ export function getCart(_input, ctx) {
     ? "Free delivery unlocked."
     : `Add ${money(totals.toFreeDelivery)} more for free delivery.`;
 
+  const shoppingFor = Object.values(ctx.app.getState().cartRecipes[shop.id] ?? {}).map((r) => r.name);
+
   return [
     `${shop.name} cart (${plural(totals.itemCount, "item")}):`,
     ...lines,
+    shoppingFor.length && `Shopping for these recipes: ${shoppingFor.join(", ")}.`,
     `Subtotal ${money(totals.subtotal)}. Delivery ${money(totals.deliveryFee + totals.priorityFee)}, service fee ${money(totals.serviceFee)}, tax ${money(totals.tax)}, tip ${money(totals.tip)}. Estimated total ${money(totals.total)}.`,
     `${minimum} ${free}`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 const stapleEntries = (ctx) =>
@@ -410,6 +418,90 @@ export function addStaplesToCart({ skip } = {}, ctx) {
     report.unavailable.length &&
       "Ask the shopper whether to swap, and whether to do that every time. add_to_cart covers a one-time swap; update_staples with if_out_of_stock saves it as a rule.",
     `Cart subtotal is now ${money(totals.subtotal)} for ${plural(totals.itemCount, "item")}.`,
+  ].filter(Boolean).join("\n");
+}
+
+// Reasons are written to the shopper ("your cart"); an agent reads about them.
+const forAgent = (reason) =>
+  reason
+    .replace(/\byou said you're\b/g, "they said they're")
+    .replace(/\byou said you have\b/g, "they said they have")
+    .replace(/\byour\b/g, "their");
+
+// Which of this recipe's ingredients does "the parmesan" mean?
+function ingredientIds(recipe, names, problems) {
+  const ids = [];
+  for (const name of Array.isArray(names) ? names : names ? [names] : []) {
+    const wanted = ingredientWords(name);
+    const best = recipe.ingredients
+      .filter((ingredient) => ingredient.productId)
+      .map((ingredient) => {
+        const words = ingredientWords(`${productsById[ingredient.productId].name} ${ingredient.label ?? ""}`);
+        return { id: ingredient.productId, hits: wanted.filter((t) => words.includes(t)).length };
+      })
+      .sort((a, b) => b.hits - a.hits)[0];
+    if (best?.hits) ids.push(best.id);
+    else problems.push(`"${name}" is not an ingredient of ${recipe.name}.`);
+  }
+  return ids;
+}
+
+export function addRecipeToCart({ recipe: wantedRecipe, ingredients, recipe_name, already_have, need, preview } = {}, ctx) {
+  const shop = openStore(ctx);
+  const state = ctx.app.getState();
+
+  let recipe;
+  if (Array.isArray(ingredients) && ingredients.length) {
+    recipe = buildCustomRecipe(recipe_name ?? wantedRecipe, ingredients, { source: "agent" });
+    if (!recipe.ingredients.some((ingredient) => ingredient.productId)) {
+      throw new ToolError(`None of those ingredients match anything ${shop.name} sells. Check them with search_products.`);
+    }
+  } else if (wantedRecipe) {
+    const name = String(wantedRecipe).trim().toLowerCase();
+    recipe = [...recipes, ...state.customRecipes].find((r) => r.name.toLowerCase() === name);
+    if (!recipe) {
+      throw new ToolError(`There is no recipe called "${wantedRecipe}". Basketful's recipes: ${recipes.map((r) => r.name).join(", ")}. For any other recipe, pass its ingredients.`);
+    }
+  } else {
+    throw new ToolError(`Provide "recipe" (one of: ${recipes.map((r) => r.name).join(", ")}) or "ingredients" for a recipe from anywhere else.`);
+  }
+
+  const problems = [];
+  const have = ingredientIds(recipe, already_have, problems);
+  const out = ingredientIds(recipe, need, problems);
+  const now = ctx.now().getTime();
+  const plan = planRecipe(shop, state, recipe, { now, have, need: out });
+
+  if (!preview) {
+    if (recipe.custom) saveCustomRecipe(ctx.app, recipe);
+    notePantry(ctx.app, { have, need: out }, now);
+    applyRecipePlan(ctx.app, shop, recipe, plan);
+    ctx.navigate(`/recipes/${recipe.id}`);
+    ctx.notify(plan.itemCount ? `Added ${plural(plan.itemCount, "item")} for ${recipe.name}` : `You have everything for ${recipe.name}`);
+  }
+
+  const pick = (status) => plan.lines.filter((line) => line.status === status);
+  const explained = (lines, withCount) =>
+    lines.map((l) => `${withCount ? `${l.add} × ` : ""}${l.label} (${forAgent(l.reason)})`).join("; ");
+  const loose = recipe.ingredients.filter((i) => i.productId && i.alternatives?.length);
+  const totals = cartTotals(shop, cartOf(ctx, shop));
+
+  return [
+    `${recipe.name} at ${shop.name}${preview ? " (preview, nothing changed)" : ""}:`,
+    pick("add").length && `${preview ? "Would add" : "Added"}: ${explained(pick("add"), true)}.`,
+    pick("in_cart").length && `Already in the cart: ${pick("in_cart").map((l) => l.label).join(", ")}.`,
+    pick("have").length && `Left out, assuming they still have it: ${explained(pick("have"))}.`,
+    pick("ask").length &&
+      `Not added yet, ask if they still have: ${explained(pick("ask"))}.`,
+    ...pick("out_of_stock").map((l) =>
+      `Out of stock: ${l.label}${l.suggestions.length ? ` (closest in stock: ${l.suggestions.map((p) => p.name).join(", ")})` : ""}.`
+    ),
+    pick("unmatched").length && `Not sold here: ${pick("unmatched").map((l) => l.label).join(", ")}.`,
+    loose.length &&
+      `Loose matches: ${loose.map((i) => `${i.label} → ${productsById[i.productId].name} (or ${i.alternatives.map((id) => productsById[id].name).join(", ")})`).join("; ")}. Pass the exact product name as the ingredient to change one.`,
+    ...problems,
+    !preview && `Cart subtotal is now ${money(totals.subtotal)} for ${plural(totals.itemCount, "item")}.`,
+    "Tell the shopper what was assumed. Once they answer, call again with already_have or need: the cart is adjusted, never doubled.",
   ].filter(Boolean).join("\n");
 }
 

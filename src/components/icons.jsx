@@ -78,3 +78,9 @@ export const StarIcon = ({ filled = false, size = 18 }) => (
     <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />
   </svg>
 );
+
+export const BookIcon = ({ size = 20 }) => (
+  <svg {...base} width={size} height={size}>
+    <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6" />
+  </svg>
+);

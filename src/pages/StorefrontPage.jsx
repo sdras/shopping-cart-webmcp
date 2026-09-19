@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard.jsx";
 import StartWithUsual from "../components/StartWithUsual.jsx";
-import { BoltIcon, ChevronIcon, HomeIcon, ReceiptIcon, StarIcon } from "../components/icons.jsx";
+import { BoltIcon, BookIcon, ChevronIcon, HomeIcon, ReceiptIcon, StarIcon } from "../components/icons.jsx";
 import { storesById } from "../data/stores.js";
 import { products, productsById, departments, departmentsById, dietaryTags } from "../data/products.js";
 import { searchProducts } from "../lib/catalog.js";
@@ -35,6 +35,11 @@ function Sidebar({ shop, activeDept, browsing }) {
           <li>
             <Link to="/usuals">
               <StarIcon size={20} />Your usuals
+            </Link>
+          </li>
+          <li>
+            <Link to="/recipes">
+              <BookIcon />Recipes
             </Link>
           </li>
           <li>

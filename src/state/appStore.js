@@ -2,6 +2,8 @@ import { createStore } from "./createStore.js";
 import { storesById } from "../data/stores.js";
 import { cartTotals, DEFAULT_TIP } from "../lib/pricing.js";
 import { planTopUp } from "../lib/staples.js";
+import { countable } from "../lib/recipes.js";
+import { productsById } from "../data/products.js";
 
 const STORAGE_KEY = "basketful:v1";
 export const MAX_QUANTITY = 24;
@@ -18,6 +20,13 @@ const emptyState = () => ({
   substitutions: {},
   stapleOffers: {}, // { [orderId]: "saved" | "dismissed" }, the post-order prompt
   dismissedSuggestions: [], // product ids the shopper said "no thanks" to
+  // What the shopper has told us about their kitchen, which beats our guesses
+  // until they buy the thing again: { [productId]: { have: boolean, at: timestamp } }
+  pantryNotes: {},
+  // Which recipes each cart is shopping for, and what each one is counting on:
+  // { [storeId]: { [recipeId]: { name, emoji, items: { [productId]: { uses, added } } } } }
+  cartRecipes: {},
+  customRecipes: [], // recipes pasted in or brought by an agent
   address: { street: "", unit: "", city: "", zip: "", instructions: "" },
   checkout: { windowId: null, tip: null, replacements: REPLACEMENT_OPTIONS[0] },
   orders: [],
@@ -106,7 +115,11 @@ export function addItem(store, storeId, productId, quantity = 1) {
 }
 
 export function clearCart(store, storeId) {
-  store.setState((s) => ({ ...s, carts: { ...s.carts, [storeId]: {} } }));
+  store.setState((s) => ({
+    ...s,
+    carts: { ...s.carts, [storeId]: {} },
+    cartRecipes: { ...s.cartRecipes, [storeId]: {} },
+  }));
 }
 
 const without = (object, key) => {
@@ -178,6 +191,117 @@ export function restoreCart(store, storeId, cart) {
   store.setState((s) => ({ ...s, carts: { ...s.carts, [storeId]: { ...cart } } }));
 }
 
+/** Remember what the shopper said about their kitchen: ids they have, ids they're out of. */
+export function notePantry(store, { have = [], need = [] }, now = Date.now()) {
+  if (have.length + need.length === 0) return;
+  store.setState((s) => ({
+    ...s,
+    pantryNotes: {
+      ...s.pantryNotes,
+      ...Object.fromEntries(have.map((id) => [id, { have: true, at: now }])),
+      ...Object.fromEntries(need.map((id) => [id, { have: false, at: now }])),
+    },
+  }));
+}
+
+/**
+ * Make the cart match a recipe plan (from planRecipe). It syncs rather than
+ * adds: whatever this recipe put in before is taken back out first, so
+ * applying it again, or again with different answers, never doubles anything.
+ */
+export function applyRecipePlan(store, shop, recipe, plan) {
+  store.setState((s) => {
+    const cart = { ...(s.carts[shop.id] ?? {}) };
+    const records = { ...(s.cartRecipes[shop.id] ?? {}) };
+    const own = records[recipe.id]?.items ?? {};
+
+    for (const id of new Set([...Object.keys(own), ...Object.keys(plan.target)])) {
+      const withoutMine = Math.max(0, (cart[id] ?? 0) - (own[id]?.added ?? 0));
+      const quantity = clampQuantity(withoutMine + (plan.target[id]?.added ?? 0));
+      if (quantity === 0) delete cart[id];
+      else cart[id] = quantity;
+    }
+
+    if (Object.keys(plan.target).length) records[recipe.id] = { name: recipe.name, emoji: recipe.emoji, items: plan.target };
+    else delete records[recipe.id];
+
+    return { ...s, carts: { ...s.carts, [shop.id]: cart }, cartRecipes: { ...s.cartRecipes, [shop.id]: records } };
+  });
+}
+
+/**
+ * Take a recipe back out: remove what it added. The exception is a shared
+ * bag or jar that another recipe is also counting on, which stays.
+ */
+export function removeRecipeFromCart(store, storeId, recipeId) {
+  store.setState((s) => {
+    const { [recipeId]: record, ...others } = s.cartRecipes[storeId] ?? {};
+    if (!record) return s;
+    const cart = { ...(s.carts[storeId] ?? {}) };
+    for (const [id, { added }] of Object.entries(record.items)) {
+      const product = productsById[id];
+      const shared = product && !countable(product) && Object.values(others).some((other) => other.items[id]);
+      if (!added || shared) continue;
+      const quantity = Math.max(0, (cart[id] ?? 0) - added);
+      if (quantity === 0) delete cart[id];
+      else cart[id] = quantity;
+    }
+    return { ...s, carts: { ...s.carts, [storeId]: cart }, cartRecipes: { ...s.cartRecipes, [storeId]: others } };
+  });
+}
+
+export function saveCustomRecipe(store, recipe) {
+  store.setState((s) => ({
+    ...s,
+    customRecipes: [recipe, ...s.customRecipes.filter((r) => r.id !== recipe.id)].slice(0, 20),
+  }));
+}
+
+export function deleteCustomRecipe(store, recipeId) {
+  store.setState((s) => ({ ...s, customRecipes: s.customRecipes.filter((r) => r.id !== recipeId) }));
+}
+
+// Pantry memory needs a past. This gives the demo one: a spice-and-staples
+// shop two months back, fresh things two weeks ago, a top-up last week.
+const SAMPLE_HISTORY = [
+  { daysAgo: 62, items: { oregano: 1, cumin: 1, "olive-oil": 1, "sea-salt": 1, "black-pepper": 1, spaghetti: 1, "rice-jasmine": 1 } },
+  { daysAgo: 14, items: { "tomato-vine": 2, cilantro: 1, "ground-beef": 1, romaine: 1, lime: 2, salmon: 1 } },
+  { daysAgo: 5, items: { "eggs-large": 1, butter: 1, garlic: 1, "onion-yellow": 1, cheddar: 1, parmesan: 1 } },
+];
+
+export function loadSampleHistory(store, now = Date.now()) {
+  const shop = storesById.greenleaf;
+  const samples = SAMPLE_HISTORY.map(({ daysAgo, items }) => {
+    const { lines, ...totals } = cartTotals(shop, items, { tip: DEFAULT_TIP });
+    return {
+      id: `BF-S${daysAgo}`,
+      sample: true,
+      storeId: shop.id,
+      storeName: shop.name,
+      placedAt: now - daysAgo * 24 * 60 * 60 * 1000,
+      shopper: SHOPPERS[daysAgo % SHOPPERS.length],
+      window: { label: "a while back", priority: false },
+      replacements: REPLACEMENT_OPTIONS[0],
+      address: { ...store.getState().address },
+      items: lines.map((l) => ({
+        id: l.product.id, name: l.product.name, emoji: l.product.emoji, size: l.product.size,
+        quantity: l.quantity, unitPrice: l.unitPrice, lineTotal: l.lineTotal,
+      })),
+      totals,
+    };
+  });
+  store.setState((s) => ({
+    ...s,
+    orders: [...s.orders.filter((o) => !o.sample), ...samples].sort((a, b) => b.placedAt - a.placedAt),
+    // The sample orders are history, not a moment to ask about usuals.
+    stapleOffers: { ...s.stapleOffers, ...Object.fromEntries(samples.map((o) => [o.id, "dismissed"])) },
+  }));
+}
+
+export function removeSampleHistory(store) {
+  store.setState((s) => ({ ...s, orders: s.orders.filter((o) => !o.sample) }));
+}
+
 export function saveAddress(store, address) {
   store.setState((s) => ({ ...s, address: { ...s.address, ...address } }));
 }
@@ -222,6 +346,7 @@ export function placeOrder(store, { deliveryWindow, now = new Date() }) {
     orders: [order, ...s.orders],
     nextOrderNumber: s.nextOrderNumber + 1,
     carts: { ...s.carts, [shop.id]: {} },
+    cartRecipes: { ...s.cartRecipes, [shop.id]: {} },
     checkout: { ...s.checkout, windowId: null, tip: null },
   }));
   return order;

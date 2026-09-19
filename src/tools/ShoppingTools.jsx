@@ -16,6 +16,7 @@ export default function ShoppingTools() {
   useTool(definitions.getStaples, handlers.getStaples, ctx);
   useTool(definitions.updateStaples, handlers.updateStaples, ctx);
   useTool(definitions.addStaplesToCart, handlers.addStaplesToCart, ctx);
+  useTool(definitions.addRecipeToCart, handlers.addRecipeToCart, ctx);
   useTool(definitions.startCheckout, handlers.startCheckout, ctx);
   useTool(definitions.getOrderStatus, handlers.getOrderStatus, ctx);
   return null;

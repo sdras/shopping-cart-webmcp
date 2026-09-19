@@ -1,0 +1,131 @@
+// Basketful's own recipes. Quantities are in the store's units (2 means two
+// tomatoes-on-the-vine packs, not two tomatoes); `amount` is what the recipe
+// itself calls for, shown to the cook.
+const rows = [
+  {
+    id: "tomato-pasta",
+    name: "Simple Tomato Pasta",
+    emoji: "🍝",
+    minutes: 25,
+    serves: 4,
+    blurb: "Burst tomatoes, garlic, and a lot of basil. Tuesday, solved.",
+    ingredients: [
+      ["spaghetti", 1, "12 oz"],
+      ["tomato-vine", 2, "2 lb, chopped"],
+      ["garlic", 1, "4 cloves"],
+      ["olive-oil", 1, "1/4 cup"],
+      ["oregano", 1, "1 tsp"],
+      ["chili-flakes", 1, "a pinch"],
+      ["basil", 1, "a big handful"],
+      ["parmesan", 1, "to finish"],
+      ["sea-salt", 1, "to taste"],
+    ],
+    steps: [
+      "Boil the spaghetti in well-salted water until just shy of done. Save a cup of the water.",
+      "Warm the olive oil with sliced garlic, oregano, and chili flakes until it smells like a good idea.",
+      "Add the tomatoes and a big pinch of salt. Cook hard for 8 minutes until they collapse.",
+      "Toss in the pasta with a splash of its water. Tear in the basil, shower with parmesan.",
+    ],
+  },
+  {
+    id: "beef-tacos",
+    name: "Weeknight Beef Tacos",
+    emoji: "🌮",
+    minutes: 30,
+    serves: 4,
+    blurb: "Crisp-edged beef, warm tortillas, everything on the table.",
+    ingredients: [
+      ["ground-beef", 1, "1 lb"],
+      ["tortillas-corn", 1, "12 tortillas"],
+      ["cumin", 1, "2 tsp"],
+      ["onion-yellow", 1, "1 onion, diced"],
+      ["garlic", 1, "2 cloves"],
+      ["tomato-vine", 1, "2 tomatoes, diced"],
+      ["romaine", 1, "shredded"],
+      ["mexican-blend", 1, "1 cup"],
+      ["avocado", 2, "2, sliced"],
+      ["lime", 2, "2, in wedges"],
+      ["cilantro", 1, "a handful"],
+      ["salsa", 1, "for the table"],
+      ["sea-salt", 1, "to taste"],
+    ],
+    steps: [
+      "Brown the beef with the onion over high heat until the edges crisp. Add garlic, cumin, and salt.",
+      "Char the tortillas directly over a flame or in a dry pan.",
+      "Set out the tomatoes, romaine, cheese, avocado, cilantro, limes, and salsa. Let everyone build.",
+    ],
+  },
+  {
+    id: "guacamole",
+    name: "Guacamole & Chips",
+    emoji: "🥑",
+    minutes: 10,
+    serves: 4,
+    blurb: "Chunky, limey, gone in four minutes.",
+    ingredients: [
+      ["avocado", 3, "3 ripe"],
+      ["lime", 2, "juice of 2"],
+      ["onion-yellow", 1, "1/4 onion, minced"],
+      ["jalapeno", 1, "1, minced"],
+      ["cilantro", 1, "a handful"],
+      ["sea-salt", 1, "to taste"],
+      ["tortilla-chips", 1, "1 bag"],
+    ],
+    steps: [
+      "Mash the avocados with lime juice and salt, leaving it chunky.",
+      "Fold in the onion, jalapeño, and cilantro. Taste. It wants more lime and salt than you think.",
+    ],
+  },
+  {
+    id: "sheet-pan-salmon",
+    name: "Sheet-Pan Salmon & Broccoli",
+    emoji: "🐟",
+    minutes: 25,
+    serves: 2,
+    blurb: "One pan, high heat, lemon over everything.",
+    ingredients: [
+      ["salmon", 1, "1 lb fillet"],
+      ["broccoli", 1, "1 lb, in florets"],
+      ["lemon", 1, "1"],
+      ["garlic", 1, "2 cloves"],
+      ["olive-oil", 1, "2 tbsp"],
+      ["rice-jasmine", 1, "1 cup"],
+      ["sea-salt", 1, "to taste"],
+      ["black-pepper", 1, "to taste"],
+    ],
+    steps: [
+      "Start the rice. Heat the oven to 425°F.",
+      "Toss the broccoli with oil, garlic, salt, and pepper. Roast 10 minutes.",
+      "Add the salmon, season it, and roast 10 to 12 minutes more. Squeeze the lemon over the pan.",
+    ],
+  },
+  {
+    id: "breakfast-scramble",
+    name: "Cheddar & Spinach Scramble",
+    emoji: "🍳",
+    minutes: 15,
+    serves: 2,
+    blurb: "Soft eggs, sharp cheddar, toast for scooping.",
+    ingredients: [
+      ["eggs-large", 1, "5 eggs"],
+      ["butter", 1, "1 tbsp"],
+      ["cheddar", 1, "1/2 cup, grated"],
+      ["spinach", 1, "2 big handfuls"],
+      ["bacon", 1, "4 slices"],
+      ["wheat-bread", 1, "for toast"],
+      ["black-pepper", 1, "to taste"],
+    ],
+    steps: [
+      "Crisp the bacon. Wilt the spinach in a little of the fat, then set both aside.",
+      "Melt the butter over low heat. Stir the eggs slowly until barely set, then fold in cheddar and spinach.",
+      "Pile onto toast with the bacon and a lot of pepper.",
+    ],
+  },
+];
+
+export const recipes = rows.map((recipe) => ({
+  ...recipe,
+  ingredients: recipe.ingredients.map(([productId, quantity, amount]) => ({ productId, quantity, amount })),
+}));
+
+export const recipesById = Object.fromEntries(recipes.map((r) => [r.id, r]));

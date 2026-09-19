@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import OrderSummary from "../components/OrderSummary.jsx";
 import { BoltIcon } from "../components/icons.jsx";
 import { useToolContext } from "../tools/useTool.js";
 import { deliveryAddressForm } from "../tools/definitions.js";
+import { deliveryAddressTool } from "../tools/addressTool.js";
+import { registerLocalTool } from "../tools/registry.js";
 import * as handlers from "../tools/handlers.js";
 import { storesById } from "../data/stores.js";
 import { getDeliveryWindows, findDeliveryWindow } from "../lib/deliveryWindows.js";
@@ -22,12 +24,9 @@ const TIP_CHOICES = [0, 2, 4, 6, 10];
 function AddressForm({ ctx }) {
   const address = useApp((s) => s.address);
   const [status, setStatus] = useState(null);
+  const formRef = useRef(null);
 
-  function submit(event) {
-    event.preventDefault();
-    const native = event.nativeEvent;
-    const fields = Object.fromEntries(new FormData(event.currentTarget));
-
+  function save(fields) {
     let result;
     try {
       result = { ok: true, message: handlers.setDeliveryAddress(fields, ctx) };
@@ -35,6 +34,14 @@ function AddressForm({ ctx }) {
       result = { ok: false, message: error.message };
     }
     setStatus(result);
+    return result;
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    const native = event.nativeEvent;
+    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    const result = save(fields);
 
     if (native.agentInvoked) {
       logToolCall({ name: deliveryAddressForm.name, input: fields, output: result.message, ok: result.ok });
@@ -42,10 +49,33 @@ function AddressForm({ ctx }) {
     }
   }
 
+  // The built-in assistant has no browser to fill the form in on its behalf,
+  // so it gets the same tool by hand: its answers go into the same fields, for
+  // the shopper to see, and through the same save.
+  useEffect(
+    () =>
+      registerLocalTool(deliveryAddressTool, (input) => {
+        const form = formRef.current;
+        toast("Filling in the delivery address", { agent: true });
+        for (const name of Object.keys(deliveryAddressTool.inputSchema.properties)) {
+          if (input[name] != null && form.elements[name]) form.elements[name].value = String(input[name]);
+        }
+        const fields = Object.fromEntries(new FormData(form));
+        const result = save(fields);
+        logToolCall({ name: deliveryAddressTool.name, input: fields, output: result.message, ok: result.ok });
+        if (!result.ok) throw new Error(result.message);
+        return result.message;
+      }),
+    // `save` only closes over ctx and a state setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ctx]
+  );
+
   // The form stays on the page after saving so the tool stays registered and
   // an agent can correct the address later.
   return (
     <form
+      ref={formRef}
       className="address-form"
       onSubmit={submit}
       toolname={deliveryAddressForm.name}

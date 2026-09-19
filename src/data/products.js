@@ -40,13 +40,14 @@ const rows = [
   ["cucumber", "Cucumbers", "produce", 0.99, "each", "🥒", ["vegan", "gluten-free", "dairy-free"], "Cool, crisp slicing cucumbers.", "vegetable salad"],
   ["corn", "Sweet Corn", "produce", 0.69, "each", "🌽", ["vegan", "gluten-free", "dairy-free"], "Fresh ears of sweet corn.", "vegetable"],
   ["onion-yellow", "Yellow Onions", "produce", 1.29, "1 lb", "🧅", ["vegan", "gluten-free", "dairy-free"], "All-purpose cooking onions.", "vegetable taco"],
-  ["garlic", "Garlic", "produce", 0.79, "each", "🧄", ["vegan", "gluten-free", "dairy-free"], "Whole heads of garlic.", "vegetable"],
+  ["garlic", "Garlic", "produce", 0.79, "1 head", "🧄", ["vegan", "gluten-free", "dairy-free"], "Whole heads of garlic.", "vegetable"],
   ["potato-russet", "Russet Potatoes", "produce", 3.99, "5 lb bag", "🥔", ["vegan", "gluten-free", "dairy-free"], "Fluffy bakers and mashers.", "vegetable"],
   ["sweet-potato", "Sweet Potatoes", "produce", 1.49, "1 lb", "🍠", ["vegan", "gluten-free", "dairy-free"], "Orange-fleshed sweet potatoes.", "vegetable yam"],
   ["bell-pepper", "Red Bell Peppers", "produce", 1.69, "each", "🫑", ["vegan", "gluten-free", "dairy-free"], "Sweet red bell peppers.", "vegetable fajita"],
   ["jalapeno", "Jalapeño Peppers", "produce", 0.25, "each", "🌶️", ["vegan", "gluten-free", "dairy-free"], "Medium-heat green chiles.", "spicy salsa taco"],
   ["mushrooms", "Cremini Mushrooms", "produce", 3.29, "8 oz", "🍄", ["vegan", "gluten-free", "dairy-free"], "Earthy baby bella mushrooms.", "vegetable"],
   ["cilantro", "Cilantro", "produce", 0.99, "bunch", "🌿", ["vegan", "gluten-free", "dairy-free"], "Fresh cilantro bunch.", "herb salsa taco"],
+  ["basil", "Fresh Basil", "produce", 2.99, "bunch", "🌱", ["vegan", "gluten-free", "dairy-free"], "Sweet Genovese basil.", "herb pesto"],
 
   // Dairy & Eggs
   ["milk-whole", "Whole Milk", "dairy", 4.29, "1 gal", "🥛", ["gluten-free"], "Vitamin D whole milk.", ""],
@@ -65,6 +66,7 @@ const rows = [
   ["greek-yogurt", "Plain Greek Yogurt", "dairy", 5.99, "32 oz", "🥣", ["gluten-free"], "Whole milk, strained thick.", ""],
   ["sour-cream", "Sour Cream", "dairy", 2.79, "16 oz", "🥣", ["gluten-free"], "Cultured sour cream.", "taco"],
   ["cream-cheese", "Cream Cheese", "dairy", 3.49, "8 oz", "🧀", ["gluten-free"], "Original brick cream cheese.", "bagel"],
+  ["parmesan", "Parmesan Wedge", "dairy", 7.99, "8 oz", "🧀", ["gluten-free"], "Aged 24 months. Grate it yourself.", "parmigiano cheese pasta"],
 
   // Bakery
   ["sourdough", "Sourdough Loaf", "bakery", 5.99, "24 oz", "🍞", ["vegan", "dairy-free"], "Naturally leavened, baked this morning.", "bread"],
@@ -100,6 +102,10 @@ const rows = [
   ["taco-seasoning", "Taco Seasoning", "pantry", 1.29, "1 oz packet", "🌮", ["vegan", "dairy-free"], "Classic chili, cumin, and garlic blend.", "spice taco"],
   ["olive-oil", "Extra Virgin Olive Oil", "pantry", 9.99, "16.9 fl oz", "🫒", ["vegan", "gluten-free", "dairy-free"], "Cold-pressed, single origin.", "cooking oil"],
   ["sea-salt", "Sea Salt", "pantry", 2.99, "26 oz", "🧂", ["vegan", "gluten-free", "dairy-free"], "Fine-grain sea salt.", "spice"],
+  ["black-pepper", "Black Pepper", "pantry", 4.49, "2 oz", "🧂", ["vegan", "gluten-free", "dairy-free"], "Coarse ground black pepper.", "spice peppercorn"],
+  ["oregano", "Dried Oregano", "pantry", 3.49, "0.75 oz", "🌿", ["vegan", "gluten-free", "dairy-free"], "Mediterranean oregano, dried.", "spice herb"],
+  ["cumin", "Ground Cumin", "pantry", 3.99, "2 oz", "🫙", ["vegan", "gluten-free", "dairy-free"], "Warm, earthy ground cumin.", "spice taco chili"],
+  ["chili-flakes", "Red Pepper Flakes", "pantry", 3.29, "1.5 oz", "🌶️", ["vegan", "gluten-free", "dairy-free"], "Crushed red chile flakes.", "spice chili spicy"],
   ["honey", "Wildflower Honey", "pantry", 6.99, "12 oz", "🍯", ["gluten-free", "dairy-free"], "Raw and unfiltered.", "sweetener"],
   ["peanut-butter", "Creamy Peanut Butter", "pantry", 3.99, "16 oz", "🥜", ["vegan", "gluten-free", "dairy-free"], "Just peanuts and salt.", "pb sandwich"],
   ["oats", "Old-Fashioned Rolled Oats", "pantry", 4.29, "42 oz", "🥣", ["vegan", "dairy-free"], "Whole grain rolled oats.", "oatmeal breakfast"],
@@ -145,6 +151,31 @@ const rows = [
   ["trash-bags", "Tall Kitchen Trash Bags", "household", 7.49, "40 ct", "🗑️", [], "13-gallon drawstring bags.", "garbage"],
 ];
 
+// How long something is good for once it's in your kitchen, in days. Pantry
+// memory uses it to decide whether what you bought is probably still around.
+const KEEPS_BY_DEPARTMENT = {
+  produce: 7, dairy: 14, bakery: 5, meat: 3, pantry: 365, frozen: 180, beverages: 180, snacks: 90, household: 3650,
+};
+const KEEPS = {
+  banana: 5, "banana-organic": 5, avocado: 5, strawberries: 4, blueberries: 5, raspberries: 3, spinach: 5,
+  mushrooms: 5, cilantro: 5, basil: 5, corn: 4, "apple-honeycrisp": 28, "apple-granny": 28, lemon: 21, lime: 21,
+  "orange-navel": 21, carrots: 28, "onion-yellow": 30, garlic: 45, "potato-russet": 30, "sweet-potato": 30,
+  jalapeno: 10, "milk-whole": 10, "milk-2": 10, "oat-milk": 10, "oat-milk-barista": 10, "almond-milk": 10,
+  "eggs-large": 28, "eggs-pasture": 28, butter: 60, "butter-unsalted": 60, cheddar: 30, parmesan: 45,
+  "mexican-blend": 21, mozzarella: 7, "cream-cheese": 21, "tortillas-flour": 14, "tortillas-corn": 14,
+  bacon: 10, "hot-dogs": 14, salmon: 2, shrimp: 2, "coffee-beans": 60, "orange-juice": 10, kombucha: 30,
+  hummus: 10, "sea-salt": 1825, "black-pepper": 730, oregano: 730, cumin: 730, "chili-flakes": 730,
+  "taco-seasoning": 730, honey: 1825, sugar: 730,
+};
+
+// Bought once, used many times. When one of these is within its shelf life we
+// assume it's still in the cupboard. Everything else gets used up, so a recent
+// purchase is a question ("still have the eggs?") rather than an assumption.
+const LASTS_MANY_USES = new Set([
+  "sea-salt", "black-pepper", "oregano", "cumin", "chili-flakes", "olive-oil", "honey", "flour", "sugar",
+  "rice-jasmine", "oats", "peanut-butter", "coffee-beans", "green-tea",
+]);
+
 // Household goods are taxable; groceries are not.
 const TAXABLE_DEPARTMENTS = new Set(["household"]);
 
@@ -160,6 +191,8 @@ export const products = rows.map(
     description,
     keywords,
     taxable: TAXABLE_DEPARTMENTS.has(department),
+    keeps: KEEPS[id] ?? KEEPS_BY_DEPARTMENT[department],
+    lastsManyUses: LASTS_MANY_USES.has(id),
   })
 );
 

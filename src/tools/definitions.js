@@ -6,6 +6,7 @@
 // tool descriptions ≤ 500, parameter descriptions ≤ 150.
 import { stores } from "../data/stores.js";
 import { departments, dietaryTags } from "../data/products.js";
+import { recipes } from "../data/recipes.js";
 import { MAX_QUANTITY, REPLACEMENT_OPTIONS } from "../state/appStore.js";
 
 const productParam = {
@@ -194,6 +195,62 @@ export const addStaplesToCart = {
   annotations: { readOnlyHint: false },
 };
 
+export const addRecipeToCart = {
+  name: "add_recipe_to_cart",
+  title: "Add a recipe to the cart",
+  description:
+    "Add what a recipe needs to the open store's cart, skipping what the shopper already has. Use `recipe` for one of Basketful's recipes, or `ingredients` for a recipe from anywhere. It checks the cart and their order history: what's in the cart or still in the cupboard is skipped, perishables bought too long ago are added again, and recent purchases come back as questions. Tell the shopper what it assumed. Call again with already_have or need to correct it; it never doubles items.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      recipe: {
+        type: "string",
+        enum: recipes.map((r) => r.name),
+        description: "One of Basketful's own recipes.",
+      },
+      ingredients: {
+        type: "array",
+        description: "For a recipe from anywhere else: every ingredient it calls for.",
+        items: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "The ingredient as the recipe writes it, e.g. '2 large tomatoes, diced' or 'olive oil'.",
+            },
+            quantity: {
+              type: "integer",
+              minimum: 1,
+              maximum: 12,
+              description: "How many of the store's unit to buy, when it's clear (3 avocados). Leave out otherwise.",
+            },
+          },
+          required: ["name"],
+        },
+      },
+      recipe_name: {
+        type: "string",
+        description: "What to call a recipe passed as ingredients, e.g. 'Grandma's salsa'.",
+      },
+      already_have: {
+        type: "array",
+        items: { type: "string" },
+        description: "Ingredients the shopper says they have. They are left out (or taken back out) and remembered.",
+      },
+      need: {
+        type: "array",
+        items: { type: "string" },
+        description: "Ingredients the shopper says they are out of. They are added even if history suggests otherwise.",
+      },
+      preview: {
+        type: "boolean",
+        description: "true returns the plan without changing the cart, for 'what would I need to buy?'.",
+      },
+    },
+  },
+  annotations: { readOnlyHint: false },
+};
+
 export const startCheckout = {
   name: "start_checkout",
   title: "Start checkout",
@@ -274,6 +331,7 @@ export const staticTools = [
   getStaples,
   updateStaples,
   addStaplesToCart,
+  addRecipeToCart,
   startCheckout,
   getOrderStatus,
 ];

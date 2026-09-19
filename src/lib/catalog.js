@@ -27,9 +27,9 @@ function stem(word) {
   return word;
 }
 
-const tokens = (text) => normalize(text).split(" ").filter(Boolean).map(stem);
+export const tokens = (text) => normalize(text).split(" ").filter(Boolean).map(stem);
 
-const index = products.map((product) => ({
+export const index = products.map((product) => ({
   product,
   name: normalize(product.name),
   nameTokens: tokens(product.name),

@@ -1,10 +1,11 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Dialog from "./Dialog.jsx";
 import QuantityControl from "./QuantityControl.jsx";
 import { ProductTile } from "./ProductCard.jsx";
 import StartWithUsual from "./StartWithUsual.jsx";
 import { CloseIcon, BoltIcon } from "./icons.jsx";
-import { useOpenStore, useCartTotals } from "../state/app.js";
+import { appStore, useApp, useOpenStore, useCartTotals } from "../state/app.js";
+import { removeRecipeFromCart } from "../state/appStore.js";
 import { uiStore, closeCart } from "../state/uiStore.js";
 import { useStore } from "../state/createStore.js";
 import { money, plural } from "../lib/format.js";
@@ -33,6 +34,8 @@ export default function CartDrawer() {
   const open = useStore(uiStore, (s) => s.cartOpen) && Boolean(shop);
   const totals = useCartTotals(shop);
   const navigate = useNavigate();
+  const cartRecipes = useApp((s) => s.cartRecipes);
+  const shoppingFor = Object.entries(cartRecipes[shop?.id] ?? {});
 
   function checkout() {
     closeCart();
@@ -60,6 +63,25 @@ export default function CartDrawer() {
               <p className="eta"><BoltIcon />Delivery in about {shop.eta}</p>
             </div>
           </div>
+
+          {shoppingFor.length > 0 && (
+            <ul className="cart-recipes" aria-label="Recipes this cart is shopping for">
+              {shoppingFor.map(([id, record]) => (
+                <li key={id}>
+                  <Link to={`/recipes/${id}`} onClick={closeCart}>
+                    <span aria-hidden="true">{record.emoji}</span> {record.name}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => removeRecipeFromCart(appStore, shop.id, id)}
+                    aria-label={`Take ${record.name} out of the cart`}
+                  >
+                    <CloseIcon size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {totals.lines.length === 0 ? (
             <div className="empty-state">

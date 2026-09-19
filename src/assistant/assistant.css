@@ -1,0 +1,635 @@
+/* ---------- Voice and chat ---------- */
+/* The built-in assistant: a launcher pill in the bottom-left corner and the
+   panel it opens. It keeps to the left so the cart drawer, which the tools
+   open on the right, never lands on top of the conversation. On a wide window
+   the panel is a column beside the shop, so you can watch it act; on a
+   narrower one it floats over the corner. Tokens come from styles.css. */
+
+/* ---------- The orb ---------- */
+.orb {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.orb-canvas {
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* Until three.js arrives, and wherever WebGL is missing. */
+.orb-canvas.loading,
+.orb-canvas.fallback {
+  border-radius: 50%;
+  opacity: 0.85;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--brand) 40%, #fff), var(--brand) 60%, var(--kale));
+}
+
+.orb-halo {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-start: 50%;
+  inline-size: 160%;
+  block-size: 160%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--brand-soft) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.orb-floor {
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block-end: -10%;
+  inline-size: 70%;
+  block-size: 14%;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgb(36 37 41 / 0.14), transparent 70%);
+  pointer-events: none;
+}
+
+/* ---------- The launcher ---------- */
+/* It sits over the foot of the storefront's aisle list, so the list gets room
+   to scroll its last links clear of it. Only while that list is a sticky
+   column: from 900px down it is a strip across the top. */
+@media (min-width: 901px) {
+  .storefront .store-sidebar {
+    padding-block-end: 84px;
+  }
+}
+
+/* A pill that reads as an input you can type in or talk to. */
+.assistant-launcher {
+  position: fixed;
+  inset-block-end: 20px;
+  inset-inline-start: 20px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  block-size: 44px;
+  padding: 0 14px 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--muted);
+  font-weight: 600;
+  transition: color 0.15s, translate 0.2s var(--ease-out), box-shadow 0.2s;
+}
+
+.assistant-launcher:hover {
+  color: var(--ink-strong);
+  translate: 0 -1px;
+  box-shadow: var(--shadow-2);
+}
+
+.assistant-launcher kbd {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+/* ---------- The panel ---------- */
+.assistant-panel {
+  position: fixed;
+  inset-block-end: 20px;
+  inset-inline-start: 20px;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  inline-size: min(380px, calc(100vw - 40px));
+  block-size: min(660px, calc(100dvh - var(--header-height) - 40px));
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: assistant-in 0.25s var(--ease-out);
+}
+
+@keyframes assistant-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+.assistant-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  block-size: 56px;
+  padding: 0 8px 0 18px;
+  border-block-end: 1px solid var(--line);
+}
+
+.assistant-head .icon-button {
+  inline-size: 34px;
+  block-size: 34px;
+  color: var(--muted);
+}
+
+.assistant-status {
+  margin-inline-start: 2px;
+  color: var(--ink-strong);
+  font-size: 0.87rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.assistant-status.error {
+  color: var(--danger);
+}
+
+.assistant-spacer {
+  flex: 1;
+}
+
+.assistant-ghost {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+
+.assistant-ghost:hover {
+  background: var(--surface-2);
+  color: var(--ink-strong);
+}
+
+.assistant-more {
+  position: relative;
+}
+
+.assistant-menu {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 1;
+  min-inline-size: 216px;
+  padding: 4px;
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+
+.assistant-menu button {
+  display: block;
+  inline-size: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-strong);
+  font-size: 0.9rem;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.assistant-menu button:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.assistant-menu button:disabled {
+  color: var(--line-strong);
+}
+
+.assistant-menu hr {
+  block-size: 1px;
+  margin: 4px 6px;
+  border: 0;
+  background: var(--line);
+}
+
+.assistant-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+/* Centred while it fits; auto margins, unlike justify-content, still let a
+   short window scroll to the top of it. */
+.assistant-body.empty > :first-child {
+  margin-block-start: auto;
+}
+
+.assistant-body.empty > :last-child {
+  margin-block-end: auto;
+}
+
+.assistant-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 24px 0;
+  text-align: center;
+}
+
+.assistant-hero h2 {
+  margin-block-start: 18px;
+  color: var(--ink-strong);
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.assistant-hero p {
+  margin-block-start: 4px;
+  color: var(--muted);
+}
+
+.assistant-try {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 18px 18px;
+}
+
+.assistant-try-label {
+  margin: 0 2px 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assistant-try-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: 0.9rem;
+  text-align: start;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.assistant-try-row:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-2);
+}
+
+.assistant-try-row span {
+  flex: 1;
+}
+
+.assistant-try-row svg {
+  flex-shrink: 0;
+  color: var(--line-strong);
+}
+
+.assistant-try-row:hover svg {
+  color: var(--muted);
+}
+
+.assistant-hint {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.assistant-hint a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- The conversation ---------- */
+.assistant-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.assistant-msg {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-msg.user {
+  align-self: flex-end;
+  max-inline-size: 86%;
+  padding: 9px 13px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--brand-soft);
+  color: var(--ink-strong);
+}
+
+.assistant-msg.user.live {
+  opacity: 0.6;
+}
+
+.assistant-msg.model {
+  padding: 0 2px;
+  color: var(--ink-strong);
+  text-wrap: pretty;
+}
+
+.assistant-msg.model.live {
+  opacity: 0.85;
+}
+
+.assistant-msg.system {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.assistant-caret {
+  display: inline-block;
+  inline-size: 1.5px;
+  block-size: 13px;
+  margin-inline-start: 2px;
+  vertical-align: -2px;
+  background: var(--muted);
+  animation: assistant-blink 1s steps(2, start) infinite;
+}
+
+@keyframes assistant-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* What a tool did, as a receipt; the latest one can be taken back. */
+.assistant-receipt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-small);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.assistant-receipt details {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.assistant-receipt-head {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 8px;
+  min-inline-size: 0;
+  list-style: none;
+}
+
+summary.assistant-receipt-head {
+  cursor: pointer;
+}
+
+summary.assistant-receipt-head::-webkit-details-marker {
+  display: none;
+}
+
+.assistant-receipt-head svg {
+  flex-shrink: 0;
+  margin-block-start: 3px;
+  color: var(--brand);
+}
+
+.assistant-receipt.error {
+  background: var(--danger-soft);
+}
+
+.assistant-receipt.error svg {
+  color: var(--danger);
+}
+
+.assistant-receipt-text {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A one-line report has nothing to open, so it shows whole; a longer one
+   shows whole once it is opened. */
+div.assistant-receipt-head .assistant-receipt-text,
+details[open] .assistant-receipt-text {
+  white-space: normal;
+}
+
+.assistant-receipt-more {
+  margin-block-start: 6px;
+  padding-inline-start: 22px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-receipt-more code {
+  display: block;
+  margin-block-end: 2px;
+  color: var(--ink);
+}
+
+.assistant-receipt-undo {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--brand-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.assistant-receipt-undo:hover {
+  background: var(--brand-soft);
+}
+
+/* ---------- The dock ---------- */
+.assistant-dock {
+  flex-shrink: 0;
+  padding: 12px 14px 14px;
+  border-block-start: 1px solid var(--line);
+}
+
+.assistant-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assistant-input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 44px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-strong);
+}
+
+/* The border is the focus ring here; the page-wide outline would square off the pill. */
+.assistant-input:focus,
+.assistant-input:focus-visible {
+  outline: none;
+  border-color: var(--ink-strong);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.assistant-input::placeholder {
+  color: var(--muted);
+}
+
+.assistant-mic {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--brand-ink);
+  transition: background 0.15s, box-shadow 0.2s;
+}
+
+.assistant-mic:hover {
+  background: var(--brand-strong);
+}
+
+.assistant-mic.on {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--brand), 0 0 0 4px var(--brand-soft);
+}
+
+.button.assistant-connect {
+  inline-size: 100%;
+}
+
+/* ---------- Setup dialog ---------- */
+.assistant-settings {
+  inline-size: min(480px, 94vw);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+}
+
+.assistant-settings[open] {
+  animation: pop-in 0.22s var(--ease-out);
+}
+
+.assistant-settings-body {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 56px 28px 28px;
+}
+
+.assistant-field-help {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.assistant-field-help a {
+  color: var(--brand-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.assistant-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 6px;
+}
+
+.button.assistant-disconnect {
+  margin-inline-end: auto;
+  color: var(--danger);
+}
+
+/* ---------- Wide screens ---------- */
+/* Room for the panel and a full-width shop side by side (the shop's own first
+   breakpoint is 1000px): the page moves over and the panel becomes a column,
+   its header level with the site's. */
+@media (min-width: 1400px) {
+  .assistant-open body {
+    padding-inline-start: 400px;
+  }
+
+  .assistant-panel {
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 400px;
+    block-size: auto;
+    border-inline-end: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    animation-name: assistant-in-beside;
+  }
+
+  .assistant-head {
+    block-size: var(--header-height);
+  }
+}
+
+@keyframes assistant-in-beside {
+  from {
+    opacity: 0;
+    translate: -24px 0;
+  }
+}
+
+/* ---------- Small screens ---------- */
+/* A sheet from the bottom edge; the shortcut hint goes, there being no ⌘ to press. */
+@media (max-width: 640px) {
+  .assistant-panel {
+    inset-block-end: 0;
+    inset-inline: 0;
+    inline-size: 100%;
+    block-size: min(82dvh, 660px);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .assistant-launcher {
+    inset-block-end: 16px;
+    inset-inline-start: 16px;
+  }
+
+  .assistant-launcher kbd {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-panel {
+    animation: none;
+  }
+
+  .assistant-launcher:hover {
+    translate: none;
+  }
+}

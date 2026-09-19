@@ -5,12 +5,15 @@ import ProductDialog from "./components/ProductDialog.jsx";
 import SubstituteDialog from "./components/SubstituteDialog.jsx";
 import Toasts from "./components/Toasts.jsx";
 import AgentPanel from "./components/AgentPanel.jsx";
+import Assistant from "./assistant/Assistant.jsx";
 import ShoppingTools from "./tools/ShoppingTools.jsx";
 import CheckoutTools from "./tools/CheckoutTools.jsx";
 import StoresPage from "./pages/StoresPage.jsx";
 import StorefrontPage from "./pages/StorefrontPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
 import StaplesPage from "./pages/StaplesPage.jsx";
+import RecipesPage from "./pages/RecipesPage.jsx";
+import RecipePage from "./pages/RecipePage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import OrderPage from "./pages/OrderPage.jsx";
 
@@ -39,6 +42,8 @@ export default function App() {
         <Route path="/store/:storeId/checkout" element={<CheckoutPage />} />
         <Route path="/usuals" element={<StaplesPage />} />
         <Route path="/staples" element={<StaplesPage />} />
+        <Route path="/recipes" element={<RecipesPage />} />
+        <Route path="/recipes/:recipeId" element={<RecipePage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderPage />} />
         <Route path="*" element={<NotFound />} />
@@ -54,6 +59,7 @@ export default function App() {
       <SubstituteDialog />
       <Toasts />
       <AgentPanel />
+      <Assistant />
     </>
   );
 }

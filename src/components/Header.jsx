@@ -92,6 +92,7 @@ export default function Header() {
         {shop ? <SearchBox shop={shop} /> : <span className="header-spacer" />}
         <DeliveryInfo shop={shop} />
         <nav aria-label="Account">
+          <NavLink to="/recipes" className="nav-link">Recipes</NavLink>
           <NavLink to="/orders" className="nav-link">Orders</NavLink>
         </nav>
         {shop && <CartButton shop={shop} />}

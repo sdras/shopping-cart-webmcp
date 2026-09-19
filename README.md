@@ -2,7 +2,7 @@
 
 **Basketful** is a grocery delivery demo (think Instacart, with made-up stores) where the whole
 shopping journey is exposed to browser agents through [WebMCP](https://github.com/webmachinelearning/webmcp).
-A person can click through it like any shop. An agent can do the same trip with thirteen tools and
+A person can click through it like any shop. An agent can do the same trip with fourteen tools and
 never touch the DOM.
 
 Pick a store → search → fill a cart → choose a delivery window → place the order → watch it arrive.
@@ -35,6 +35,7 @@ logs every call with its input and output.
 | `get_staples` | everywhere | The saved staples list, with stock and cart state at the open store | read-only |
 | `update_staples` | everywhere | Save, change, or remove staples and their out-of-stock rule; a whole list in one call | |
 | `add_staples_to_cart` | everywhere | Top the cart up to the usual quantity of every staple, applying swap/skip rules | |
+| `add_recipe_to_cart` | everywhere | A site recipe or any ingredient list → only what's missing, with its reasoning and the questions to ask | |
 | `start_checkout` | everywhere | Go to checkout; returns windows and what's still missing | |
 | `get_order_status` | everywhere | Stage, shopper, items, total; opens the tracking page | read-only |
 | `set_delivery_address` | checkout | **Declarative**: a plain `<form toolname>` | |
@@ -82,6 +83,38 @@ The site nudges an agent at the same moments it nudges a person: `place_order` m
 purchases that aren't staples yet, and `add_staples_to_cart` reports a rule-less out-of-stock item
 with its closest matches and how to save the answer (`update_staples` → `if_out_of_stock`).
 
+## Recipes, with a memory of your kitchen
+
+Adding a recipe isn't "add nine things". For each ingredient the planner (`src/lib/recipes.js`)
+decides, and says why:
+
+| Verdict | When | What it says |
+| --- | --- | --- |
+| already in the cart | it's in the basket and no other recipe has dibs on it | "Already in your cart." |
+| have it | a cupboard item (oregano, oil, salt) bought within its shelf life | "Bought 2 months ago, keeps about 2 years." |
+| ask | bought recently enough that it might still be there | "Bought 5 days ago. Still have it?" |
+| add | never bought, **or bought so long ago it must be gone** | "Last bought 2 weeks ago, keeps about 7 days: assuming it's gone." |
+
+Every guess is one tap to correct ("I have this", "I'm out"), and corrections are remembered
+until the thing is bought again. Shelf lives and "lasts many uses" live with the products.
+
+**Dedup is a sync, not an add.** Each recipe records what it *uses* and what it *added*. Applying
+a recipe takes its old additions out before putting the new plan in, so applying twice, or again
+with different answers, never doubles anything. Bags and jars are shared between recipes (one
+bunch of cilantro does tacos and guacamole); things sold one at a time are counted (two recipes
+that each want 2 limes want 4). Taking a recipe out of the cart removes what it added, except a
+shared bag another recipe still needs.
+
+For agents it's one tool, `add_recipe_to_cart`: pass `recipe` (an enum of the site's recipes) or
+`ingredients` exactly as any recipe writes them ("2 large tomatoes, diced"). It adds what's
+certain, states its assumptions, and returns the questions. The agent relays them and calls again
+with `already_have` / `need`; `preview: true` answers "what would I need?" without touching the
+cart. Loose ingredient matches are reported ("tomatoes → Tomatoes on the Vine (or Diced
+Tomatoes)") so the agent can correct them.
+
+Pantry memory needs a past, so the recipe pages offer a one-click **sample order history**
+(spices two months ago, tomatoes two weeks ago, eggs last week) and a one-click way to remove it.
+
 ## Skills + WebMCP: your list, the site's tools
 
 `skills/grocery-staples/` is an [Agent Skill](https://docs.claude.com/en/docs/claude-code/skills)
@@ -109,6 +142,36 @@ $EDITOR ~/.claude/skills/grocery-staples/staples.md
 Because the list is synced into the site, the person can also hit **Add all to cart** on the
 "Your staples" shelf, and any other agent can call `add_staples_to_cart` without the skill.
 
+## The assistant that lives on the page
+
+Not everyone shows up with an agent, so the site brings one. **Ask or say…** in the bottom-left
+corner (or ⌘J) opens voice and chat: a [Gemini Live](https://ai.google.dev/gemini-api/docs/live)
+session that hears, speaks, types, and shops. It needs a Gemini API key, which stays in this
+browser under its own localStorage entry, apart from the cart, where no tool can read it.
+
+It has no tools of its own, and that's the point:
+
+- **One registry, two kinds of agent.** `useTool` puts every tool it registers with WebMCP into a
+  page-side registry too, under the same conditions. The assistant declares and calls what's in
+  there, so it can do exactly what a browser agent could do on this page right now, in any
+  browser, flag or no flag. A new tool shows up in the assistant without anyone telling it.
+- **Checkout tools still come and go.** A Live session declares its functions once, so the three
+  checkout tools are always declared, and calling one from the wrong page comes back as "only
+  works on the checkout page. Call start_checkout first." The delivery window drops its `enum`
+  there: a session can outlast the clock.
+- **The address form stays a form.** The assistant's `set_delivery_address` types into the same
+  fields and goes through the same save as a person or a WebMCP agent, so you watch it fill in.
+- **Receipts, with Undo.** Every call lands in the conversation as a one-line receipt that opens
+  to show what the model actually read. If the call changed the cart, staples, address, or
+  checkout options, the receipt offers Undo until something else changes, and the model is told
+  its work was taken back. An order that was placed stays placed.
+- **The page still shows the work.** Its calls navigate, open the drawer, raise toasts, and show
+  up under 🤖 **Agent tools** like anyone else's. On a wide window the panel sits beside the shop
+  rather than on top of it.
+
+The orb is three.js, loaded on demand and only once the page is idle, with a CSS stand-in until
+then and wherever WebGL is missing.
+
 ## How it's put together
 
 ```
@@ -120,7 +183,10 @@ src/
     definitions.js   names, descriptions, schemas, annotations
     handlers.js      tool logic, no React, returns strings / throws ToolError
     useTool.js       wraps use-webmcp-tool: paint-then-report, logging, in-flight guard
+    registry.js      the same live tools, by name, for the built-in assistant
+    addressTool.js   the address form's schema, for whoever can't read the form
     ShoppingTools.jsx, CheckoutTools.jsx
+  assistant/     voice and chat: Gemini Live client, tool runner + undo, panel, orb
   components/, pages/
 skills/          the grocery-staples agent skill and its WebMCP bridge
 tests/           handler, definition, and cross-tab tests (Vitest, no browser needed)

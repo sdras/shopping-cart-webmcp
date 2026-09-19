@@ -455,6 +455,114 @@
     ]
   },
   {
+    "name": "Add one of the site's recipes",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. I want to make the Simple Tomato Pasta tonight, get me what I need."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_recipe_to_cart",
+        "arguments": {
+          "recipe": "Simple Tomato Pasta"
+        }
+      }
+    ]
+  },
+  {
+    "name": "What would I need, without touching the cart",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Don't add anything yet, but what would I have to buy to make the Weeknight Beef Tacos?"
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_recipe_to_cart",
+        "arguments": {
+          "recipe": "Weeknight Beef Tacos",
+          "preview": true
+        }
+      }
+    ]
+  },
+  {
+    "name": "A recipe from somewhere else",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. I'm making caprese salad: 3 ripe tomatoes, 8 oz fresh mozzarella, a handful of basil, olive oil and salt. Add what I need."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_recipe_to_cart",
+        "arguments": {
+          "ingredients": {
+            "$type": "array"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "Answering the pantry questions",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market and you just added the Simple Tomato Pasta. I still have the parmesan, but I'm out of spaghetti."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_recipe_to_cart",
+        "arguments": {
+          "recipe": "Simple Tomato Pasta",
+          "already_have": [
+            {
+              "$pattern": "[Pp]armesan"
+            }
+          ],
+          "need": [
+            {
+              "$pattern": "[Ss]paghetti"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Correcting an assumption",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market and you just added the Simple Tomato Pasta, assuming my tomatoes had gone off. They're fine actually, I bought more at the farmers market."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_recipe_to_cart",
+        "arguments": {
+          "recipe": "Simple Tomato Pasta",
+          "already_have": [
+            {
+              "$pattern": "[Tt]omato"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
     "name": "Journey: taco night, ambiguous list",
     "messages": [
       {

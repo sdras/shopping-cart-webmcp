@@ -76,7 +76,7 @@ describe("search_products", () => {
     const { ctx } = setup();
     tools.chooseStore({ store: "Greenleaf Market" }, ctx);
     const output = tools.searchProducts({ department: "Produce" }, ctx);
-    expect(output).toContain("Showing 8 of 26 results");
+    expect(output).toContain("Showing 8 of 27 results");
     expect(output.length).toBeLessThan(1500);
   });
 
