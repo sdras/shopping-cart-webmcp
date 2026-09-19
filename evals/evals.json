@@ -1,0 +1,203 @@
+[
+  {
+    "name": "Open a store by name",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Let's shop at Penny Pantry today." }
+    ],
+    "expectedCall": [
+      { "functionName": "choose_store", "arguments": { "store": "Penny Pantry" } }
+    ]
+  },
+  {
+    "name": "Open a store by description",
+    "messages": [
+      { "role": "user", "type": "message", "content": "I want to order from the organic place." }
+    ],
+    "expectedCall": [
+      { "functionName": "choose_store", "arguments": { "store": "Harbor Foods Co-op" } }
+    ]
+  },
+  {
+    "name": "Direct search",
+    "messages": [
+      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. Do they have oat milk?" }
+    ],
+    "expectedCall": [
+      { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Oo]at [Mm]ilk" } } }
+    ]
+  },
+  {
+    "name": "Search with dietary need and price cap",
+    "messages": [
+      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. Show me vegan snacks under $4." }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "search_products",
+        "arguments": { "department": "Snacks", "dietary": ["vegan"], "max_price": { "$lte": 4 } }
+      }
+    ]
+  },
+  {
+    "name": "Browse an aisle with no query",
+    "messages": [
+      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. What's in the frozen aisle?" }
+    ],
+    "expectedCall": [
+      { "functionName": "search_products", "arguments": { "department": "Frozen" } }
+    ]
+  },
+  {
+    "name": "Add several exact products in one call",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Add 2 Corn Tortillas, 1 Medium Salsa and 3 Limes to my cart."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_to_cart",
+        "arguments": {
+          "items": [
+            { "product": "Corn Tortillas", "quantity": 2 },
+            { "product": "Medium Salsa", "quantity": 1 },
+            { "product": "Limes", "quantity": 3 }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Change a quantity uses update, not add",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market with Corn Tortillas in my cart. Actually make that 4 packs of Corn Tortillas, not 2."
+      }
+    ],
+    "expectedCall": [
+      { "functionName": "update_cart_item", "arguments": { "product": "Corn Tortillas", "quantity": 4 } }
+    ]
+  },
+  {
+    "name": "Remove an item",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Take the Medium Salsa out of my cart."
+      }
+    ],
+    "expectedCall": [
+      { "functionName": "update_cart_item", "arguments": { "product": "Medium Salsa", "quantity": 0 } }
+    ]
+  },
+  {
+    "name": "Review the cart",
+    "messages": [
+      { "role": "user", "type": "message", "content": "What's in my cart and what's the total looking like?" }
+    ],
+    "expectedCall": [{ "functionName": "get_cart", "arguments": {} }]
+  },
+  {
+    "name": "Begin checkout is initiation, not purchase",
+    "messages": [
+      { "role": "user", "type": "message", "content": "OK I'm done shopping, let's check out." }
+    ],
+    "expectedCall": [{ "functionName": "start_checkout", "arguments": {} }]
+  },
+  {
+    "name": "Save the delivery address",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm on the checkout page. Deliver to 742 Evergreen Terrace, apartment 3B, Springfield 97403. The gate code is 4821."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "set_delivery_address",
+        "arguments": {
+          "street": { "$pattern": "742 Evergreen Terrace" },
+          "unit": { "$pattern": "3B" },
+          "city": "Springfield",
+          "zip": "97403",
+          "instructions": { "$pattern": "4821" }
+        }
+      }
+    ]
+  },
+  {
+    "name": "Tip is passed through as said",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm on the checkout page. Tip 20% and if something's out just refund it."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "set_delivery_options",
+        "arguments": { "tip": { "$pattern": "20\\s?%" }, "replacements": "Refund item" }
+      }
+    ]
+  },
+  {
+    "name": "Fastest delivery maps to the priority window",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm on the checkout page. I need this as fast as possible, I don't mind paying extra."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "set_delivery_options",
+        "arguments": { "delivery_window": { "$pattern": "^Priority" } }
+      }
+    ]
+  },
+  {
+    "name": "Order status, most recent",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Where's my order?" }
+    ],
+    "expectedCall": [{ "functionName": "get_order_status", "arguments": {} }]
+  },
+  {
+    "name": "Order status, specific order",
+    "messages": [
+      { "role": "user", "type": "message", "content": "Has order BF-1003 been delivered yet?" }
+    ],
+    "expectedCall": [
+      { "functionName": "get_order_status", "arguments": { "order_number": { "$pattern": "1003" } } }
+    ]
+  },
+  {
+    "name": "Journey: taco night, ambiguous list",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Open Greenleaf Market. I'm making tacos tonight: find corn tortillas and ground beef, put them in my cart, then take me to checkout."
+      }
+    ],
+    "expectedCall": [
+      { "functionName": "choose_store", "arguments": { "store": "Greenleaf Market" } },
+      {
+        "unordered": [
+          { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Tt]ortilla" } } },
+          { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Bb]eef" } } }
+        ]
+      },
+      { "functionName": "add_to_cart", "arguments": {} },
+      { "functionName": "start_checkout", "arguments": {} }
+    ]
+  }
+]

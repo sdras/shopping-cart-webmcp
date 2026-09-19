@@ -1,0 +1,208 @@
+// What agents see: names, descriptions, schemas, and annotations for every
+// imperative WebMCP tool. Kept free of React and handler logic so the same
+// objects feed the hook, the tests, and `npm run evals:schema`.
+//
+// Budgets (enforced in tests/definitions.test.js): names ≤ 30 chars,
+// tool descriptions ≤ 500, parameter descriptions ≤ 150.
+import { stores } from "../data/stores.js";
+import { departments, dietaryTags } from "../data/products.js";
+import { MAX_QUANTITY, REPLACEMENT_OPTIONS } from "../state/appStore.js";
+
+const productParam = {
+  type: "string",
+  description: "Product name as shown in search_products results, e.g. 'Corn Tortillas'.",
+};
+
+export const chooseStore = {
+  name: "choose_store",
+  title: "Choose a store",
+  description:
+    "Open one of Basketful's grocery stores so the shopper can browse and order from it. Each store has its own cart, prices, and delivery fee. Use this first when no store is open, or when the shopper asks to switch stores. Returns the store's delivery fee, order minimum, and departments.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      store: {
+        type: "string",
+        enum: stores.map((s) => s.name),
+        description:
+          "Greenleaf Market: everyday groceries, fastest. Harbor Foods Co-op: organic, pricier. Penny Pantry: lowest prices.",
+      },
+    },
+    required: ["store"],
+  },
+  annotations: { readOnlyHint: false },
+};
+
+export const searchProductsTool = {
+  name: "search_products",
+  title: "Search products",
+  description:
+    "Search the open store's catalog and show the results on the page. Every filter is optional: combine a text query with a department, dietary needs, or a price cap, or pass only a department to browse an aisle. Search one kind of product per call. Returns up to 8 products with exact name, price, size, and stock status; use those exact names with add_to_cart.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "Product words as the shopper said them, e.g. 'corn tortillas' or 'oat milk'.",
+      },
+      department: {
+        type: "string",
+        enum: departments.map((d) => d.name),
+        description: "Limit results to one department (aisle).",
+      },
+      dietary: {
+        type: "array",
+        items: { type: "string", enum: dietaryTags },
+        description: "Only return products that meet every listed dietary need.",
+      },
+      max_price: {
+        type: "number",
+        description: "Highest price per item in dollars, e.g. 5 for 'under $5'.",
+      },
+    },
+  },
+  annotations: { readOnlyHint: true },
+};
+
+export const addToCart = {
+  name: "add_to_cart",
+  title: "Add to cart",
+  description:
+    "Add one or more products to the open store's cart. Takes a list, so a whole shopping list can go in one call. Quantities add to whatever is already in the cart. Returns what was added, anything that could not be added and why (out of stock, or a name that matches several products), and the new subtotal.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        minItems: 1,
+        description: "The products to add.",
+        items: {
+          type: "object",
+          properties: {
+            product: productParam,
+            quantity: {
+              type: "integer",
+              minimum: 1,
+              maximum: MAX_QUANTITY,
+              description: "How many to add. Defaults to 1.",
+            },
+          },
+          required: ["product"],
+        },
+      },
+    },
+    required: ["items"],
+  },
+  annotations: { readOnlyHint: false },
+};
+
+export const updateCartItem = {
+  name: "update_cart_item",
+  title: "Update cart item",
+  description:
+    "Set the exact quantity of a product that is already in the open store's cart, or remove it by setting the quantity to 0. Use this when the shopper changes their mind about an amount; use add_to_cart to put new products in the cart. Returns the new subtotal.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      product: productParam,
+      quantity: {
+        type: "integer",
+        minimum: 0,
+        maximum: MAX_QUANTITY,
+        description: "The new total quantity for this product. 0 removes it from the cart.",
+      },
+    },
+    required: ["product", "quantity"],
+  },
+  annotations: { readOnlyHint: false },
+};
+
+export const getCart = {
+  name: "get_cart",
+  title: "Get cart",
+  description:
+    "Read the open store's cart: each item with its quantity and price, the subtotal, estimated fees and total, and whether the store's order minimum is met. Use it to review the cart with the shopper before checkout.",
+  inputSchema: { type: "object", properties: {} },
+  annotations: { readOnlyHint: true },
+};
+
+export const startCheckout = {
+  name: "start_checkout",
+  title: "Start checkout",
+  description:
+    "Go to the checkout page for the open store's cart. This begins checkout and buys nothing yet. Returns the available delivery windows, the saved delivery address if there is one, and what is still needed before the order can be placed. The checkout tools (set_delivery_address, set_delivery_options, place_order) become available after this call.",
+  inputSchema: { type: "object", properties: {} },
+  annotations: { readOnlyHint: false },
+};
+
+export const getOrderStatus = {
+  name: "get_order_status",
+  title: "Get order status",
+  description:
+    "Check on an order that was already placed: its stage (order placed, shopping, out for delivery, or delivered), delivery window, shopper, items, and total. Also opens that order's tracking page. With no order number it returns the most recent order.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      order_number: {
+        type: "string",
+        description: "Order number such as 'BF-1001'. Leave out for the most recent order.",
+      },
+    },
+  },
+  annotations: { readOnlyHint: true },
+};
+
+// The delivery windows move with the clock, so this schema is built per render.
+export const setDeliveryOptions = (windowLabels) => ({
+  name: "set_delivery_options",
+  title: "Set delivery options",
+  description:
+    "On the checkout page, choose the delivery window, the tip, and what the shopper should do when an item is out of stock. Send only the options being changed. Returns the updated order total.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      delivery_window: {
+        type: "string",
+        enum: windowLabels,
+        description: "When the order should arrive. Priority costs $2 extra; every other window is free.",
+      },
+      tip: {
+        type: "string",
+        description: "Tip as the shopper said it: '$5', '15%', or 'none'. The whole tip goes to the person shopping.",
+      },
+      replacements: {
+        type: "string",
+        enum: REPLACEMENT_OPTIONS,
+        description: "What to do when an item is out of stock at the store.",
+      },
+    },
+  },
+  annotations: { readOnlyHint: false },
+});
+
+export const placeOrderTool = {
+  name: "place_order",
+  title: "Place order",
+  description:
+    "Place the order on the checkout page and charge the shopper's saved payment method. This is a real purchase, so review the items, delivery window, address, and total with the shopper and get their go-ahead first. Returns the order number and delivery estimate.",
+  inputSchema: { type: "object", properties: {} },
+  annotations: { readOnlyHint: false, consequentialHint: true },
+};
+
+// The delivery address is a declarative tool: a plain <form> on the checkout
+// page. These strings are its `toolname` / `tooldescription` attributes.
+export const deliveryAddressForm = {
+  name: "set_delivery_address",
+  description:
+    "Save where the order should be delivered: street, optional apartment or unit, city, ZIP code, and optional instructions for the driver such as a gate code.",
+};
+
+export const staticTools = [
+  chooseStore,
+  searchProductsTool,
+  addToCart,
+  updateCartItem,
+  getCart,
+  startCheckout,
+  getOrderStatus,
+];

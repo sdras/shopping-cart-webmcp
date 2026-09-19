@@ -1,0 +1,26 @@
+{
+  "name": "shopping-cart-webmcp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Basketful: a grocery delivery demo whose whole shopping journey is exposed to browser agents through WebMCP tools.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "evals:schema": "node scripts/export-tool-schema.mjs"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0",
+    "use-webmcp-tool": "^0.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,26 @@
+# Basketful
+
+> Basketful is a demo grocery delivery site. Shoppers pick a store, fill a cart, choose a delivery window, and place an order. Nothing is really charged or delivered.
+
+The whole shopping journey is exposed to browser agents as WebMCP tools on `document.modelContext`, so an agent can shop without reading or clicking the DOM.
+
+## Tools available on every page
+
+- choose_store: open a store (Greenleaf Market, Harbor Foods Co-op, Penny Pantry)
+- search_products: search or browse the open store's catalog
+- add_to_cart: add a list of products by name
+- update_cart_item: change a quantity or remove a product
+- get_cart: read the cart, fees, and order minimum
+- start_checkout: go to the checkout page
+- get_order_status: check on a placed order
+
+## Tools available on the checkout page
+
+- set_delivery_address: a form for the delivery address
+- set_delivery_options: delivery window, tip, and out-of-stock preference
+- place_order: places the order; confirm with the shopper first
+
+## Pages
+
+- [Stores](/): choose a store
+- [Orders](/orders): past orders and live tracking

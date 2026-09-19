@@ -1,0 +1,235 @@
+{
+  "tools": [
+    {
+      "name": "choose_store",
+      "description": "Open one of Basketful's grocery stores so the shopper can browse and order from it. Each store has its own cart, prices, and delivery fee. Use this first when no store is open, or when the shopper asks to switch stores. Returns the store's delivery fee, order minimum, and departments.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "type": "string",
+            "enum": [
+              "Greenleaf Market",
+              "Harbor Foods Co-op",
+              "Penny Pantry"
+            ],
+            "description": "Greenleaf Market: everyday groceries, fastest. Harbor Foods Co-op: organic, pricier. Penny Pantry: lowest prices."
+          }
+        },
+        "required": [
+          "store"
+        ]
+      }
+    },
+    {
+      "name": "search_products",
+      "description": "Search the open store's catalog and show the results on the page. Every filter is optional: combine a text query with a department, dietary needs, or a price cap, or pass only a department to browse an aisle. Search one kind of product per call. Returns up to 8 products with exact name, price, size, and stock status; use those exact names with add_to_cart.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Product words as the shopper said them, e.g. 'corn tortillas' or 'oat milk'."
+          },
+          "department": {
+            "type": "string",
+            "enum": [
+              "Produce",
+              "Dairy & Eggs",
+              "Bakery",
+              "Meat & Seafood",
+              "Pantry",
+              "Frozen",
+              "Beverages",
+              "Snacks",
+              "Household"
+            ],
+            "description": "Limit results to one department (aisle)."
+          },
+          "dietary": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "organic",
+                "vegan",
+                "gluten-free",
+                "dairy-free"
+              ]
+            },
+            "description": "Only return products that meet every listed dietary need."
+          },
+          "max_price": {
+            "type": "number",
+            "description": "Highest price per item in dollars, e.g. 5 for 'under $5'."
+          }
+        }
+      }
+    },
+    {
+      "name": "add_to_cart",
+      "description": "Add one or more products to the open store's cart. Takes a list, so a whole shopping list can go in one call. Quantities add to whatever is already in the cart. Returns what was added, anything that could not be added and why (out of stock, or a name that matches several products), and the new subtotal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The products to add.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product": {
+                  "type": "string",
+                  "description": "Product name as shown in search_products results, e.g. 'Corn Tortillas'."
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 24,
+                  "description": "How many to add. Defaults to 1."
+                }
+              },
+              "required": [
+                "product"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    },
+    {
+      "name": "update_cart_item",
+      "description": "Set the exact quantity of a product that is already in the open store's cart, or remove it by setting the quantity to 0. Use this when the shopper changes their mind about an amount; use add_to_cart to put new products in the cart. Returns the new subtotal.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "description": "Product name as shown in search_products results, e.g. 'Corn Tortillas'."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 24,
+            "description": "The new total quantity for this product. 0 removes it from the cart."
+          }
+        },
+        "required": [
+          "product",
+          "quantity"
+        ]
+      }
+    },
+    {
+      "name": "get_cart",
+      "description": "Read the open store's cart: each item with its quantity and price, the subtotal, estimated fees and total, and whether the store's order minimum is met. Use it to review the cart with the shopper before checkout.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "start_checkout",
+      "description": "Go to the checkout page for the open store's cart. This begins checkout and buys nothing yet. Returns the available delivery windows, the saved delivery address if there is one, and what is still needed before the order can be placed. The checkout tools (set_delivery_address, set_delivery_options, place_order) become available after this call.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_order_status",
+      "description": "Check on an order that was already placed: its stage (order placed, shopping, out for delivery, or delivered), delivery window, shopper, items, and total. Also opens that order's tracking page. With no order number it returns the most recent order.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "order_number": {
+            "type": "string",
+            "description": "Order number such as 'BF-1001'. Leave out for the most recent order."
+          }
+        }
+      }
+    },
+    {
+      "name": "set_delivery_address",
+      "description": "Save where the order should be delivered: street, optional apartment or unit, city, ZIP code, and optional instructions for the driver such as a gate code.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string",
+            "description": "Street number and name, e.g. '742 Evergreen Terrace'."
+          },
+          "unit": {
+            "type": "string",
+            "description": "Apartment, suite, or unit number. Leave empty for a house."
+          },
+          "city": {
+            "type": "string",
+            "description": "City name."
+          },
+          "zip": {
+            "type": "string",
+            "description": "5-digit US ZIP code, e.g. '94110'."
+          },
+          "instructions": {
+            "type": "string",
+            "description": "Notes for the driver, such as a gate code or where to leave the bags."
+          }
+        },
+        "required": [
+          "street",
+          "city",
+          "zip"
+        ]
+      }
+    },
+    {
+      "name": "set_delivery_options",
+      "description": "On the checkout page, choose the delivery window, the tip, and what the shopper should do when an item is out of stock. Send only the options being changed. Returns the updated order total.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "delivery_window": {
+            "type": "string",
+            "enum": [
+              "Priority (within 45 min)",
+              "Today 4pm–6pm",
+              "Today 6pm–8pm",
+              "Today 8pm–10pm",
+              "Tomorrow 8am–10am",
+              "Tomorrow 10am–12pm",
+              "Tomorrow 12pm–2pm",
+              "Tomorrow 2pm–4pm"
+            ],
+            "description": "When the order should arrive. Priority costs $2 extra; every other window is free."
+          },
+          "tip": {
+            "type": "string",
+            "description": "Tip as the shopper said it: '$5', '15%', or 'none'. The whole tip goes to the person shopping."
+          },
+          "replacements": {
+            "type": "string",
+            "enum": [
+              "Best match",
+              "Contact me",
+              "Refund item"
+            ],
+            "description": "What to do when an item is out of stock at the store."
+          }
+        }
+      }
+    },
+    {
+      "name": "place_order",
+      "description": "Place the order on the checkout page and charge the shopper's saved payment method. This is a real purchase, so review the items, delivery window, address, and total with the shopper and get their go-ahead first. Returns the order number and delivery estimate.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}
