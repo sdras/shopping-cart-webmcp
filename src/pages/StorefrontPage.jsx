@@ -1,11 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import ProductCard from "../components/ProductCard.jsx";
+import StartWithUsual from "../components/StartWithUsual.jsx";
+import { BoltIcon, ChevronIcon, HomeIcon, ReceiptIcon, StarIcon } from "../components/icons.jsx";
 import { storesById } from "../data/stores.js";
 import { products, productsById, departments, departmentsById, dietaryTags } from "../data/products.js";
 import { searchProducts } from "../lib/catalog.js";
 import { appStore, useApp, useCart } from "../state/app.js";
 import { selectStore } from "../state/appStore.js";
+import { addAllStaples } from "../state/stapleActions.js";
 import { money, plural } from "../lib/format.js";
 
 function Sidebar({ shop, activeDept, browsing }) {
@@ -15,26 +18,40 @@ function Sidebar({ shop, activeDept, browsing }) {
         <span className="store-logo" aria-hidden="true">{shop.emoji}</span>
         <h1>{shop.name}</h1>
         <p className="muted">{shop.tagline}</p>
+        <p className="eta"><BoltIcon />Delivery in about {shop.eta}</p>
         <ul className="store-facts">
-          <li><span className="emoji" aria-hidden="true">⚡</span>Delivery in about {shop.eta}</li>
           <li>{money(shop.deliveryFee)} delivery, free over {money(shop.freeDeliveryOver)}</li>
-          <li>{money(shop.minimumOrder)} minimum</li>
+          <li>{money(shop.minimumOrder)} minimum order</li>
         </ul>
+        <Link to="/" className="text-link">Change store</Link>
       </div>
-      <nav aria-label="Departments">
-        <ul className="dept-nav">
+      <nav aria-label="Store">
+        <ul className="side-nav">
           <li>
             <Link to={`/store/${shop.id}`} aria-current={browsing ? "page" : undefined}>
-              <span className="emoji" aria-hidden="true">🏠</span>Shop
+              <HomeIcon />Shop
             </Link>
           </li>
+          <li>
+            <Link to="/usuals">
+              <StarIcon size={20} />Your usuals
+            </Link>
+          </li>
+          <li>
+            <Link to="/orders">
+              <ReceiptIcon />Orders
+            </Link>
+          </li>
+        </ul>
+        <h2 className="side-heading" id="aisles-heading">Browse aisles</h2>
+        <ul className="side-nav aisles" aria-labelledby="aisles-heading">
           {departments.map((d) => (
             <li key={d.id}>
               <Link
                 to={`/store/${shop.id}?dept=${d.id}`}
                 aria-current={activeDept === d.id ? "page" : undefined}
               >
-                <span className="emoji" aria-hidden="true">{d.emoji}</span>{d.name}
+                {d.name}
               </Link>
             </li>
           ))}
@@ -44,15 +61,53 @@ function Sidebar({ shop, activeDept, browsing }) {
   );
 }
 
-function Shelf({ id, title, link, items, shop, cart }) {
+function Shelf({ id, title, link, linkLabel = "View more", action, items, shop, cart }) {
+  const rowRef = useRef(null);
+  const [edges, setEdges] = useState({ start: true, end: false });
+
+  const measure = useCallback(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    setEdges({
+      start: row.scrollLeft <= 4,
+      end: row.scrollLeft + row.clientWidth >= row.scrollWidth - 4,
+    });
+  }, []);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [measure, items.length]);
+
   if (items.length === 0) return null;
+
+  const page = (direction) =>
+    rowRef.current.scrollBy({ left: direction * rowRef.current.clientWidth * 0.85, behavior: "smooth" });
+
   return (
     <section className="shelf" aria-labelledby={`shelf-${id}`}>
       <header>
         <h2 id={`shelf-${id}`}>{title}</h2>
-        {link && <Link to={link}>View all</Link>}
+        <div className="shelf-controls">
+          {action}
+          {link && (
+            <Link to={link} className="text-link">
+              {linkLabel}<ChevronIcon size={14} />
+            </Link>
+          )}
+          <button type="button" className="round-button" disabled={edges.start} onClick={() => page(-1)} aria-label={`Scroll ${title} back`}>
+            <ChevronIcon direction="left" />
+          </button>
+          <button type="button" className="round-button" disabled={edges.end} onClick={() => page(1)} aria-label={`Scroll ${title} forward`}>
+            <ChevronIcon />
+          </button>
+        </div>
       </header>
-      <div className="shelf-row" tabIndex={0} role="group" aria-label={`${title} products`}>
+      <div className="shelf-row" ref={rowRef} onScroll={measure} tabIndex={0} role="group" aria-label={`${title} products`}>
         {items.map((p) => (
           <ProductCard key={p.id} shop={shop} product={p} quantity={cart[p.id] ?? 0} />
         ))}
@@ -105,6 +160,12 @@ export default function StorefrontPage() {
     [shop, browsing, query, dept, dietKey, maxPrice]
   );
 
+  const staples = useApp((s) => s.staples);
+  const stapleProducts = useMemo(
+    () => Object.keys(staples).map((id) => productsById[id]).filter(Boolean),
+    [staples]
+  );
+
   const buyAgain = useMemo(() => {
     const ids = new Set(orders.flatMap((o) => o.items.map((i) => i.id)));
     return [...ids].map((id) => productsById[id]).filter(Boolean).slice(0, 12);
@@ -136,6 +197,23 @@ export default function StorefrontPage() {
       <main id="main" className="storefront-main">
         {browsing ? (
           <>
+            <StartWithUsual shop={shop} />
+            <Shelf
+              id="staples"
+              title="Your usuals"
+              link="/usuals"
+              linkLabel="Edit list"
+              action={
+                Object.keys(cart).length > 0 && (
+                  <button type="button" className="button small" onClick={() => addAllStaples(shop)}>
+                    Add my usuals
+                  </button>
+                )
+              }
+              items={stapleProducts}
+              shop={shop}
+              cart={cart}
+            />
             <Shelf id="again" title="Buy it again" items={buyAgain} shop={shop} cart={cart} />
             {departments.map((d) => (
               <Shelf
@@ -155,7 +233,7 @@ export default function StorefrontPage() {
               <div>
                 <h2 id="results-title">{heading}</h2>
                 <p className="muted" role="status">
-                  {plural(results.length, "product")}
+                  {plural(results.length, "result")}
                   {maxPrice != null && ` under ${money(maxPrice)}`}
                 </p>
               </div>

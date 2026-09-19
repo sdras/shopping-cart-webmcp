@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import OrderSummary from "../components/OrderSummary.jsx";
+import { BoltIcon } from "../components/icons.jsx";
 import { useToolContext } from "../tools/useTool.js";
 import { deliveryAddressForm } from "../tools/definitions.js";
 import * as handlers from "../tools/handlers.js";
@@ -162,115 +163,124 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main id="main" className="page checkout">
-      <div className="checkout-steps">
-        <p><Link to={`/store/${shop.id}`}>← Back to {shop.name}</Link></p>
-        <h1>Checkout</h1>
+    <div className="checkout-bg">
+      <main id="main" className="page checkout">
+        <div className="checkout-steps">
+          <p><Link to={`/store/${shop.id}`}>← Back to {shop.name}</Link></p>
+          <h1>Checkout</h1>
 
-        <Step number={1} title="Delivery address" done={isAddressComplete(address)}>
-          <AddressForm ctx={ctx} />
-        </Step>
+          <Step number={1} title="Delivery address" done={isAddressComplete(address)}>
+            <AddressForm ctx={ctx} />
+          </Step>
 
-        <Step number={2} title="Delivery time" done={Boolean(chosen)}>
-          <fieldset className="option-grid">
-            <legend className="visually-hidden">Choose a delivery window</legend>
-            {windows.map((w) => (
-              <label key={w.id} className="option">
+          <Step number={2} title="Delivery time" done={Boolean(chosen)}>
+            <fieldset className="option-grid">
+              <legend className="visually-hidden">Choose a delivery window</legend>
+              {windows.map((w) => (
+                <label key={w.id} className="option">
+                  <input
+                    type="radio"
+                    name="delivery-window"
+                    checked={chosen?.id === w.id}
+                    onChange={() => setCheckout(appStore, { windowId: w.id })}
+                  />
+                  <span className="option-label">
+                    {w.priority && <span className="eta"><BoltIcon /></span>}
+                    {w.label}
+                  </span>
+                  <span className="muted">{w.fee ? `+${money(w.fee)}` : "Free"}</span>
+                </label>
+              ))}
+            </fieldset>
+          </Step>
+
+          <Step number={3} title="If something is out of stock" done>
+            <fieldset className="option-grid three">
+              <legend className="visually-hidden">Replacement preference</legend>
+              {REPLACEMENT_OPTIONS.map((option) => (
+                <label key={option} className="option">
+                  <input
+                    type="radio"
+                    name="replacements"
+                    checked={checkout.replacements === option}
+                    onChange={() => setCheckout(appStore, { replacements: option })}
+                  />
+                  <span className="option-label">{option}</span>
+                </label>
+              ))}
+            </fieldset>
+          </Step>
+
+          <Step number={4} title="Tip your shopper" done>
+            <p className="muted">100% of the tip goes to the person shopping your order.</p>
+            <div className="chips" role="group" aria-label="Tip amount">
+              {TIP_CHOICES.map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  className="chip"
+                  aria-pressed={tip === amount}
+                  onClick={() => setCheckout(appStore, { tip: amount })}
+                >
+                  {amount === 0 ? "No tip" : money(amount)}
+                </button>
+              ))}
+              <label className={`chip chip-input${customTip ? " active" : ""}`}>
+                <span>Other $</span>
                 <input
-                  type="radio"
-                  name="delivery-window"
-                  checked={chosen?.id === w.id}
-                  onChange={() => setCheckout(appStore, { windowId: w.id })}
+                  type="number"
+                  min="0"
+                  max="200"
+                  step="0.5"
+                  aria-label="Custom tip in dollars"
+                  value={customTip ? tip : ""}
+                  onChange={(e) => {
+                    const amount = Number(e.target.value);
+                    if (e.target.value !== "" && amount >= 0 && amount <= 200) {
+                      setCheckout(appStore, { tip: amount });
+                    }
+                  }}
                 />
-                <span className="option-label">
-                  {w.priority && <span className="emoji" aria-hidden="true">⚡</span>}
-                  {w.label}
-                </span>
-                <span className="muted">{w.fee ? `+${money(w.fee)}` : "Free"}</span>
               </label>
-            ))}
-          </fieldset>
-        </Step>
+            </div>
+          </Step>
 
-        <Step number={3} title="If something is out of stock" done>
-          <fieldset className="option-grid three">
-            <legend className="visually-hidden">Replacement preference</legend>
-            {REPLACEMENT_OPTIONS.map((option) => (
-              <label key={option} className="option">
-                <input
-                  type="radio"
-                  name="replacements"
-                  checked={checkout.replacements === option}
-                  onChange={() => setCheckout(appStore, { replacements: option })}
-                />
-                <span className="option-label">{option}</span>
-              </label>
-            ))}
-          </fieldset>
-        </Step>
+          <Step number={5} title="Payment" done>
+            <div className="saved-row">
+              <p><strong><span className="emoji" aria-hidden="true">💳</span>Demo card ending in 4242</strong></p>
+              <span className="badge muted">Nothing is charged</span>
+            </div>
+          </Step>
+        </div>
 
-        <Step number={4} title="Tip your shopper" done>
-          <p className="muted">100% of the tip goes to the person shopping your order.</p>
-          <div className="chips" role="group" aria-label="Tip amount">
-            {TIP_CHOICES.map((amount) => (
-              <button
-                key={amount}
-                type="button"
-                className="chip"
-                aria-pressed={tip === amount}
-                onClick={() => setCheckout(appStore, { tip: amount })}
-              >
-                {amount === 0 ? "No tip" : money(amount)}
-              </button>
-            ))}
-            <label className={`chip chip-input${customTip ? " active" : ""}`}>
-              <span>Other $</span>
-              <input
-                type="number"
-                min="0"
-                max="200"
-                step="0.5"
-                aria-label="Custom tip in dollars"
-                value={customTip ? tip : ""}
-                onChange={(e) => {
-                  const amount = Number(e.target.value);
-                  if (e.target.value !== "" && amount >= 0 && amount <= 200) {
-                    setCheckout(appStore, { tip: amount });
-                  }
-                }}
-              />
-            </label>
+        <aside className="checkout-summary" aria-labelledby="summary-title">
+          <button type="button" className="button wide" onClick={submitOrder}>
+            <span>Place order</span>
+            <span className="button-amount">{money(totals.total)}</span>
+          </button>
+          {error && <p className="form-error" role="alert">{humanize(error)}</p>}
+          <p className="fine-print">This is a demo. Placing the order charges nothing and delivers nothing.</p>
+
+          <div className="cart-store" style={{ "--hue": shop.hue }}>
+            <span className="store-logo small" aria-hidden="true">{shop.emoji}</span>
+            <div>
+              <h2 id="summary-title">{shop.name}</h2>
+              <p className="muted">{plural(totals.itemCount, "item")}</p>
+            </div>
           </div>
-        </Step>
-
-        <Step number={5} title="Payment" done>
-          <div className="saved-row">
-            <p><strong><span className="emoji" aria-hidden="true">💳</span>Demo card ending in 4242</strong></p>
-            <span className="badge muted">Nothing is charged</span>
-          </div>
-        </Step>
-      </div>
-
-      <aside className="checkout-summary" aria-labelledby="summary-title">
-        <h2 id="summary-title"><span className="emoji" aria-hidden="true">{shop.emoji}</span>{shop.name}</h2>
-        <p className="muted">{plural(totals.itemCount, "item")}</p>
-        <ul className="summary-lines">
-          {totals.lines.map(({ product, quantity, lineTotal }) => (
-            <li key={product.id}>
-              <span aria-hidden="true">{product.emoji}</span>
-              <span>{quantity} × {product.name}</span>
-              <span>{money(lineTotal)}</span>
-            </li>
-          ))}
-        </ul>
-        <OrderSummary totals={totals} />
-        <button type="button" className="button wide" onClick={submitOrder}>
-          <span>Place order</span>
-          <span className="button-amount">{money(totals.total)}</span>
-        </button>
-        {error && <p className="form-error" role="alert">{humanize(error)}</p>}
-      </aside>
-    </main>
+          <ul className="summary-lines">
+            {totals.lines.map(({ product, quantity, lineTotal }) => (
+              <li key={product.id}>
+                <span aria-hidden="true">{product.emoji}</span>
+                <span>{quantity} × {product.name}</span>
+                <span>{money(lineTotal)}</span>
+              </li>
+            ))}
+          </ul>
+          <OrderSummary totals={totals} />
+        </aside>
+      </main>
+    </div>
   );
 }
 

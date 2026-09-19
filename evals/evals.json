@@ -2,49 +2,99 @@
   {
     "name": "Open a store by name",
     "messages": [
-      { "role": "user", "type": "message", "content": "Let's shop at Penny Pantry today." }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Let's shop at Penny Pantry today."
+      }
     ],
     "expectedCall": [
-      { "functionName": "choose_store", "arguments": { "store": "Penny Pantry" } }
+      {
+        "functionName": "choose_store",
+        "arguments": {
+          "store": "Penny Pantry"
+        }
+      }
     ]
   },
   {
     "name": "Open a store by description",
     "messages": [
-      { "role": "user", "type": "message", "content": "I want to order from the organic place." }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I want to order from the organic place."
+      }
     ],
     "expectedCall": [
-      { "functionName": "choose_store", "arguments": { "store": "Harbor Foods Co-op" } }
+      {
+        "functionName": "choose_store",
+        "arguments": {
+          "store": "Harbor Foods Co-op"
+        }
+      }
     ]
   },
   {
     "name": "Direct search",
     "messages": [
-      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. Do they have oat milk?" }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Do they have oat milk?"
+      }
     ],
     "expectedCall": [
-      { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Oo]at [Mm]ilk" } } }
+      {
+        "functionName": "search_products",
+        "arguments": {
+          "query": {
+            "$pattern": "[Oo]at [Mm]ilk"
+          }
+        }
+      }
     ]
   },
   {
     "name": "Search with dietary need and price cap",
     "messages": [
-      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. Show me vegan snacks under $4." }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Show me vegan snacks under $4."
+      }
     ],
     "expectedCall": [
       {
         "functionName": "search_products",
-        "arguments": { "department": "Snacks", "dietary": ["vegan"], "max_price": { "$lte": 4 } }
+        "arguments": {
+          "department": "Snacks",
+          "dietary": [
+            "vegan"
+          ],
+          "max_price": {
+            "$lte": 4
+          }
+        }
       }
     ]
   },
   {
     "name": "Browse an aisle with no query",
     "messages": [
-      { "role": "user", "type": "message", "content": "I'm at Greenleaf Market. What's in the frozen aisle?" }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. What's in the frozen aisle?"
+      }
     ],
     "expectedCall": [
-      { "functionName": "search_products", "arguments": { "department": "Frozen" } }
+      {
+        "functionName": "search_products",
+        "arguments": {
+          "department": "Frozen"
+        }
+      }
     ]
   },
   {
@@ -61,9 +111,18 @@
         "functionName": "add_to_cart",
         "arguments": {
           "items": [
-            { "product": "Corn Tortillas", "quantity": 2 },
-            { "product": "Medium Salsa", "quantity": 1 },
-            { "product": "Limes", "quantity": 3 }
+            {
+              "product": "Corn Tortillas",
+              "quantity": 2
+            },
+            {
+              "product": "Medium Salsa",
+              "quantity": 1
+            },
+            {
+              "product": "Limes",
+              "quantity": 3
+            }
           ]
         }
       }
@@ -79,7 +138,13 @@
       }
     ],
     "expectedCall": [
-      { "functionName": "update_cart_item", "arguments": { "product": "Corn Tortillas", "quantity": 4 } }
+      {
+        "functionName": "update_cart_item",
+        "arguments": {
+          "product": "Corn Tortillas",
+          "quantity": 4
+        }
+      }
     ]
   },
   {
@@ -92,22 +157,46 @@
       }
     ],
     "expectedCall": [
-      { "functionName": "update_cart_item", "arguments": { "product": "Medium Salsa", "quantity": 0 } }
+      {
+        "functionName": "update_cart_item",
+        "arguments": {
+          "product": "Medium Salsa",
+          "quantity": 0
+        }
+      }
     ]
   },
   {
     "name": "Review the cart",
     "messages": [
-      { "role": "user", "type": "message", "content": "What's in my cart and what's the total looking like?" }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "What's in my cart and what's the total looking like?"
+      }
     ],
-    "expectedCall": [{ "functionName": "get_cart", "arguments": {} }]
+    "expectedCall": [
+      {
+        "functionName": "get_cart",
+        "arguments": {}
+      }
+    ]
   },
   {
     "name": "Begin checkout is initiation, not purchase",
     "messages": [
-      { "role": "user", "type": "message", "content": "OK I'm done shopping, let's check out." }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "OK I'm done shopping, let's check out."
+      }
     ],
-    "expectedCall": [{ "functionName": "start_checkout", "arguments": {} }]
+    "expectedCall": [
+      {
+        "functionName": "start_checkout",
+        "arguments": {}
+      }
+    ]
   },
   {
     "name": "Save the delivery address",
@@ -122,11 +211,17 @@
       {
         "functionName": "set_delivery_address",
         "arguments": {
-          "street": { "$pattern": "742 Evergreen Terrace" },
-          "unit": { "$pattern": "3B" },
+          "street": {
+            "$pattern": "742 Evergreen Terrace"
+          },
+          "unit": {
+            "$pattern": "3B"
+          },
           "city": "Springfield",
           "zip": "97403",
-          "instructions": { "$pattern": "4821" }
+          "instructions": {
+            "$pattern": "4821"
+          }
         }
       }
     ]
@@ -143,7 +238,12 @@
     "expectedCall": [
       {
         "functionName": "set_delivery_options",
-        "arguments": { "tip": { "$pattern": "20\\s?%" }, "replacements": "Refund item" }
+        "arguments": {
+          "tip": {
+            "$pattern": "20\\s?%"
+          },
+          "replacements": "Refund item"
+        }
       }
     ]
   },
@@ -159,24 +259,199 @@
     "expectedCall": [
       {
         "functionName": "set_delivery_options",
-        "arguments": { "delivery_window": { "$pattern": "^Priority" } }
+        "arguments": {
+          "delivery_window": {
+            "$pattern": "^Priority"
+          }
+        }
       }
     ]
   },
   {
     "name": "Order status, most recent",
     "messages": [
-      { "role": "user", "type": "message", "content": "Where's my order?" }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Where's my order?"
+      }
     ],
-    "expectedCall": [{ "functionName": "get_order_status", "arguments": {} }]
+    "expectedCall": [
+      {
+        "functionName": "get_order_status",
+        "arguments": {}
+      }
+    ]
   },
   {
     "name": "Order status, specific order",
     "messages": [
-      { "role": "user", "type": "message", "content": "Has order BF-1003 been delivered yet?" }
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Has order BF-1003 been delivered yet?"
+      }
     ],
     "expectedCall": [
-      { "functionName": "get_order_status", "arguments": { "order_number": { "$pattern": "1003" } } }
+      {
+        "functionName": "get_order_status",
+        "arguments": {
+          "order_number": {
+            "$pattern": "1003"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "Add my staples",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Just add my usual staples."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_staples_to_cart",
+        "arguments": {}
+      }
+    ]
+  },
+  {
+    "name": "The usual, minus one",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Give me the usual, but skip the eggs this week, we still have plenty."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_staples_to_cart",
+        "arguments": {
+          "skip": [
+            {
+              "$pattern": "[Ee]gg"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "What's on my staples list",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "What do I have saved as staples?"
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "get_staples",
+        "arguments": {}
+      }
+    ]
+  },
+  {
+    "name": "Make something a staple",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I buy Oat Milk every week, two cartons. Remember that as a staple."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "update_staples",
+        "arguments": {
+          "items": [
+            {
+              "product": "Oat Milk",
+              "quantity": 2
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Stop buying something regularly",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Take Thick-Cut Bacon off my staples, we're cutting back."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "update_staples",
+        "arguments": {
+          "items": [
+            {
+              "product": "Thick-Cut Bacon",
+              "quantity": 0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Staples vs. a one-off add",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "I'm at Greenleaf Market. Add a Dark Chocolate Bar 72% to my cart, just this once."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "add_to_cart",
+        "arguments": {
+          "items": [
+            {
+              "product": {
+                "$pattern": "Dark Chocolate"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "Save an out-of-stock rule",
+    "messages": [
+      {
+        "role": "user",
+        "type": "message",
+        "content": "Sourdough Loaf is one of my staples. If it's ever out, just get a French Baguette instead."
+      }
+    ],
+    "expectedCall": [
+      {
+        "functionName": "update_staples",
+        "arguments": {
+          "items": [
+            {
+              "product": {
+                "$pattern": "Sourdough"
+              },
+              "if_out_of_stock": {
+                "$pattern": "[Bb]aguette"
+              }
+            }
+          ]
+        }
+      }
     ]
   },
   {
@@ -189,15 +464,40 @@
       }
     ],
     "expectedCall": [
-      { "functionName": "choose_store", "arguments": { "store": "Greenleaf Market" } },
+      {
+        "functionName": "choose_store",
+        "arguments": {
+          "store": "Greenleaf Market"
+        }
+      },
       {
         "unordered": [
-          { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Tt]ortilla" } } },
-          { "functionName": "search_products", "arguments": { "query": { "$pattern": "[Bb]eef" } } }
+          {
+            "functionName": "search_products",
+            "arguments": {
+              "query": {
+                "$pattern": "[Tt]ortilla"
+              }
+            }
+          },
+          {
+            "functionName": "search_products",
+            "arguments": {
+              "query": {
+                "$pattern": "[Bb]eef"
+              }
+            }
+          }
         ]
       },
-      { "functionName": "add_to_cart", "arguments": {} },
-      { "functionName": "start_checkout", "arguments": {} }
+      {
+        "functionName": "add_to_cart",
+        "arguments": {}
+      },
+      {
+        "functionName": "start_checkout",
+        "arguments": {}
+      }
     ]
   }
 ]

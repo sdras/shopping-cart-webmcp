@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import OrderSummary from "../components/OrderSummary.jsx";
+import UsualsOffer from "../components/UsualsOffer.jsx";
 import { storesById } from "../data/stores.js";
 import { productsById } from "../data/products.js";
 import { inStockAt } from "../lib/catalog.js";
@@ -76,6 +77,8 @@ export default function OrderPage() {
           ))}
         </ol>
       </section>
+
+      <UsualsOffer order={order} />
 
       <section className="panel" aria-labelledby="items-title">
         <header className="panel-header">

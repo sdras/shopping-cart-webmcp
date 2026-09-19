@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronIcon, CloseIcon } from "./icons.jsx";
 import { uiStore } from "../state/uiStore.js";
 import { useStore } from "../state/createStore.js";
 
@@ -55,14 +56,31 @@ const time = (at) =>
 export default function AgentPanel() {
   const { supported, tools } = useRegisteredTools();
   const log = useStore(uiStore, (s) => s.toolLog);
+  const [open, setOpen] = useState(false);
 
+  // Escape closes the panel, unless a modal dialog is open and owns the key.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && !document.querySelector("dialog[open]")) setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  // Stays open while you click around the page, so the activity log can be
+  // watched as an agent works. It closes from its header, the ✕, or Escape.
   return (
-    <details className="agent-panel">
+    <details className="agent-panel" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         <span aria-hidden="true">🤖</span>
         <span>Agent tools</span>
         <span className="agent-count">{supported ? tools.length : "off"}</span>
+        <span className="agent-chevron"><ChevronIcon direction="up" size={16} /></span>
       </summary>
+      <button type="button" className="icon-button agent-close" onClick={() => setOpen(false)} aria-label="Close agent tools">
+        <CloseIcon size={16} />
+      </button>
       <div className="agent-panel-body">
         {supported ? (
           <>

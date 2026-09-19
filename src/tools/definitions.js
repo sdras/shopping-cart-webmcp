@@ -126,6 +126,74 @@ export const getCart = {
   annotations: { readOnlyHint: true },
 };
 
+export const getStaples = {
+  name: "get_staples",
+  title: "Get staples",
+  description:
+    "Read the shopper's saved staples (the page calls them 'Your usuals'): the products they buy regularly, each with its usual quantity and what to do when it is out of stock. When a store is open it also shows the price, stock, and how many are already in the cart. Use it to answer what is on the list or to review it before add_staples_to_cart.",
+  inputSchema: { type: "object", properties: {} },
+  annotations: { readOnlyHint: true },
+};
+
+export const updateStaples = {
+  name: "update_staples",
+  title: "Update staples",
+  description:
+    "Save products to the shopper's staples list, change their usual quantity or their out-of-stock rule, or remove them. Staples are remembered on this site across visits and apply to every store. Takes a list, so a whole staples list can be saved in one call. This edits the saved list only; use add_staples_to_cart to put staples in the cart.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        minItems: 1,
+        description: "The staples to save, change, or remove.",
+        items: {
+          type: "object",
+          properties: {
+            product: productParam,
+            quantity: {
+              type: "integer",
+              minimum: 0,
+              maximum: MAX_QUANTITY,
+              description: "Usual quantity per order. 0 removes the product from the list. Defaults to 1.",
+            },
+            if_out_of_stock: {
+              type: "string",
+              description:
+                "When this staple is out of stock: a product name to swap in, 'skip' to leave it out, or 'ask' to be asked each time.",
+            },
+          },
+          required: ["product"],
+        },
+      },
+      replace_list: {
+        type: "boolean",
+        description: "true makes these items the entire list, dropping any others. false (default) merges them in.",
+      },
+    },
+    required: ["items"],
+  },
+  annotations: { readOnlyHint: false },
+};
+
+export const addStaplesToCart = {
+  name: "add_staples_to_cart",
+  title: "Add staples to cart",
+  description:
+    "Put the shopper's saved staples in the open store's cart. Use it when they ask for their staples, 'the usual', or their regular order. It tops the cart up to each staple's usual quantity, so nothing already in the cart is doubled and it is safe to call again. A staple that is out of stock follows its saved rule (swap or skip); one with no rule is reported with close matches so you can ask the shopper.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      skip: {
+        type: "array",
+        items: { type: "string" },
+        description: "Staples to leave out this time, by product name, e.g. ['Large Eggs'] for 'skip the eggs'.",
+      },
+    },
+  },
+  annotations: { readOnlyHint: false },
+};
+
 export const startCheckout = {
   name: "start_checkout",
   title: "Start checkout",
@@ -203,6 +271,9 @@ export const staticTools = [
   addToCart,
   updateCartItem,
   getCart,
+  getStaples,
+  updateStaples,
+  addStaplesToCart,
   startCheckout,
   getOrderStatus,
 ];

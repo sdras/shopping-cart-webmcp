@@ -4,7 +4,7 @@
 // message that tells the agent what to do next; the hook turns those into
 // `isError` results.
 import { stores, storesById, findStore } from "../data/stores.js";
-import { departments } from "../data/products.js";
+import { departments, productsById } from "../data/products.js";
 import {
   searchProducts as searchCatalog,
   resolveProduct,
@@ -14,6 +14,7 @@ import {
 } from "../lib/catalog.js";
 import { cartTotals, parseTip, DEFAULT_TIP } from "../lib/pricing.js";
 import { getDeliveryWindows, findDeliveryWindow } from "../lib/deliveryWindows.js";
+import { repeatPurchases } from "../lib/staples.js";
 import { money, plural } from "../lib/format.js";
 import {
   MAX_QUANTITY,
@@ -22,6 +23,10 @@ import {
   addItem,
   setQuantity,
   setCheckout,
+  setStaple,
+  replaceStaples,
+  setSubstitution,
+  topUpStaples,
   saveAddress,
   placeOrder as commitOrder,
   isAddressComplete,
@@ -245,6 +250,169 @@ export function getCart(_input, ctx) {
   ].join("\n");
 }
 
+const stapleEntries = (ctx) =>
+  Object.entries(ctx.app.getState().staples)
+    .map(([id, usual]) => ({ product: productsById[id], usual }))
+    .filter((entry) => entry.product);
+
+const NO_STAPLES =
+  "No staples are saved yet. Save some with update_staples, or the shopper can star products on the page.";
+
+function ruleText(ctx, product) {
+  const rule = ctx.app.getState().substitutions[product.id];
+  if (rule?.type === "skip") return " — if out: skip";
+  if (rule?.type === "swap" && productsById[rule.with]) return ` — if out: ${productsById[rule.with].name}`;
+  return "";
+}
+
+// "skip", a product to swap in, or "ask" (clear the rule). Returns a problem string or null.
+function saveOutOfStockRule(ctx, product, text) {
+  const wish = String(text).trim().toLowerCase();
+  if (["ask", "ask me", ""].includes(wish)) {
+    setSubstitution(ctx.app, product.id, null);
+    return null;
+  }
+  if (["skip", "skip it", "none", "nothing", "no substitute"].includes(wish)) {
+    setSubstitution(ctx.app, product.id, { type: "skip" });
+    return null;
+  }
+  const { product: substitute, candidates } = resolveProduct(text);
+  if (candidates) {
+    return `The out-of-stock swap "${text}" for ${product.name} matches several products: ${candidateList(candidates)}. Save it again with the exact name.`;
+  }
+  if (!substitute || substitute.id === product.id) {
+    return `The out-of-stock swap "${text}" for ${product.name} was not found. Use a product name from search_products, or "skip".`;
+  }
+  setSubstitution(ctx.app, product.id, { type: "swap", with: substitute.id });
+  return null;
+}
+
+export function getStaples(_input, ctx) {
+  const staples = stapleEntries(ctx);
+  if (staples.length === 0) return NO_STAPLES;
+
+  // Read-only and unobtrusive: no navigation, so it is safe mid-checkout.
+  const shop = storesById[ctx.app.getState().storeId];
+  if (!shop) {
+    return [
+      `${plural(staples.length, "staple")} saved (open a store with choose_store to see prices and stock):`,
+      ...staples.map(({ product, usual }) => `- ${usual} × ${product.name} (${product.size})${ruleText(ctx, product)}`),
+    ].join("\n");
+  }
+
+  const cart = cartOf(ctx, shop);
+  return [
+    `${plural(staples.length, "staple")} saved. At ${shop.name}:`,
+    ...staples.map(({ product, usual }) => {
+      const stock = inStockAt(shop, product) ? "in stock" : "OUT OF STOCK";
+      const inCart = cart[product.id] ? ` — ${cart[product.id]} in cart` : "";
+      return `- ${usual} × ${product.name} (${product.size}) — ${money(priceAt(shop, product))} each — ${stock}${inCart}${ruleText(ctx, product)}`;
+    }),
+  ].join("\n");
+}
+
+export function updateStaples({ items, replace_list } = {}, ctx) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new ToolError('Provide "items": a list like [{ "product": "Large Eggs", "quantity": 1 }].');
+  }
+
+  const resolved = [];
+  const problems = [];
+  for (const item of items) {
+    const name = item?.product;
+    try {
+      const quantity = parseQuantity(item?.quantity, { min: 0, fallback: 1 });
+      const { product, candidates } = resolveProduct(name);
+      if (candidates) {
+        problems.push(`"${name}" matches several products: ${candidateList(candidates)}. Ask the shopper which one, then save it by exact name.`);
+      } else if (!product) {
+        problems.push(`"${name}" was not found. Call search_products to find the exact product name.`);
+      } else {
+        resolved.push({ product, quantity, rule: item?.if_out_of_stock });
+      }
+    } catch (error) {
+      if (!(error instanceof ToolError)) throw error;
+      problems.push(`"${name}": ${error.message}`);
+    }
+  }
+
+  if (resolved.length === 0) {
+    throw new ToolError(`Nothing was saved.\n${problems.map((p) => `- ${p}`).join("\n")}`);
+  }
+
+  if (replace_list) {
+    replaceStaples(ctx.app, Object.fromEntries(resolved.filter((r) => r.quantity > 0).map((r) => [r.product.id, r.quantity])));
+  } else {
+    for (const { product, quantity } of resolved) setStaple(ctx.app, product.id, quantity);
+  }
+  for (const { product, quantity, rule } of resolved) {
+    if (quantity === 0 || rule == null) continue;
+    const problem = saveOutOfStockRule(ctx, product, rule);
+    if (problem) problems.push(problem);
+  }
+
+  const saved = resolved
+    .filter((r) => r.quantity > 0)
+    .map((r) => {
+      const rule = ruleText(ctx, r.product).replace(" — ", ""); // "if out: skip"
+      return `${r.quantity} × ${r.product.name}${rule ? ` (${rule})` : ""}`;
+    });
+  const removed = resolved.filter((r) => r.quantity === 0).map((r) => r.product.name);
+  const count = stapleEntries(ctx).length;
+  ctx.notify(`Staples updated: ${plural(count, "product")} on your list`);
+  return [
+    saved.length && `Saved as staples: ${saved.join(", ")}.`,
+    removed.length && `Removed from staples: ${removed.join(", ")}.`,
+    ...(problems.length ? ["Not saved:", ...problems.map((p) => `- ${p}`)] : []),
+    `The staples list now has ${plural(count, "product")}.`,
+  ].filter(Boolean).join("\n");
+}
+
+export function addStaplesToCart({ skip } = {}, ctx) {
+  const shop = openStore(ctx);
+  if (stapleEntries(ctx).length === 0) throw new ToolError(NO_STAPLES);
+
+  // A skipped name only has to identify one staple, so loose names are fine.
+  const stapleIds = Object.keys(ctx.app.getState().staples);
+  const skipIds = [];
+  for (const name of Array.isArray(skip) ? skip : skip ? [skip] : []) {
+    const { product, candidates } = resolveProduct(name);
+    const matches = (product ? [product] : candidates ?? []).filter((p) => stapleIds.includes(p.id));
+    if (matches.length === 0) {
+      throw new ToolError(`"${name}" is not on the staples list, so it can't be skipped. Call get_staples to see the list.`);
+    }
+    skipIds.push(...matches.map((p) => p.id));
+  }
+
+  const report = topUpStaples(ctx.app, shop, { skip: skipIds });
+  const totals = cartTotals(shop, cartOf(ctx, shop));
+  ctx.notify(
+    report.added.length
+      ? `Added ${plural(report.added.length, "staple")} to your cart`
+      : "Your staples are already in the cart"
+  );
+
+  return [
+    report.added.length
+      ? `Added to the ${shop.name} cart: ${report.added.map((a) => `${a.added} × ${a.product.name}`).join(", ")}.`
+      : "Nothing needed adding.",
+    report.already.length && `Already in the cart: ${report.already.map((a) => a.product.name).join(", ")}.`,
+    report.substituted.length &&
+      `Out of stock, swapped by the shopper's saved rule: ${report.substituted.map((a) => `${a.substitute.name} for ${a.product.name}`).join(", ")}.`,
+    report.skippedOut.length &&
+      `Out of stock, left out by the shopper's saved rule: ${report.skippedOut.map((a) => a.product.name).join(", ")}.`,
+    report.skipped.length && `Skipped this time: ${report.skipped.map((a) => a.product.name).join(", ")}.`,
+    ...report.unavailable.map((a) =>
+      a.suggestions.length
+        ? `Out of stock with no saved rule: ${a.product.name} (usually ${a.usual}). Closest in stock: ${a.suggestions.map((p) => `${p.name} ${money(priceAt(shop, p))}`).join(", ")}.`
+        : `Out of stock with no saved rule: ${a.product.name} (usually ${a.usual}). Nothing similar is in stock.`
+    ),
+    report.unavailable.length &&
+      "Ask the shopper whether to swap, and whether to do that every time. add_to_cart covers a one-time swap; update_staples with if_out_of_stock saves it as a rule.",
+    `Cart subtotal is now ${money(totals.subtotal)} for ${plural(totals.itemCount, "item")}.`,
+  ].filter(Boolean).join("\n");
+}
+
 function requireCheckoutReadyCart(ctx, shop) {
   const totals = cartTotals(shop, cartOf(ctx, shop));
   if (totals.lines.length === 0) {
@@ -360,6 +528,23 @@ export function setDeliveryAddress(fields, ctx) {
   return `Delivery address saved: ${formatAddress(address)}.${address.instructions ? ` Driver instructions: ${address.instructions}.` : ""}`;
 }
 
+// The page asks the shopper "buy any of these every time?" after an order.
+// This gives an agent the same opening, at the same moment.
+function staplesNudge(ctx, order) {
+  const { orders, staples, dismissedSuggestions } = ctx.app.getState();
+  const inThisOrder = new Set(order.items.map((item) => item.id));
+  const repeats = repeatPurchases(orders, { staples, dismissed: dismissedSuggestions })
+    .filter((entry) => inThisOrder.has(entry.product.id))
+    .slice(0, 5);
+  if (repeats.length) {
+    return `The shopper keeps buying ${repeats.map((r) => r.product.name).join(", ")} but has not saved ${repeats.length === 1 ? "it" : "them"} as staples. Offer to save ${repeats.length === 1 ? "it" : "them"} with update_staples so next time is one step.`;
+  }
+  if (Object.keys(staples).length === 0) {
+    return "The shopper has no staples saved. If they buy some of these every time, offer to save them with update_staples.";
+  }
+  return null;
+}
+
 export function placeOrder(_input, ctx) {
   const shop = openStore(ctx);
   requireCheckoutReadyCart(ctx, shop);
@@ -385,7 +570,8 @@ export function placeOrder(_input, ctx) {
     `Order ${order.id} is placed with ${shop.name}: ${plural(order.totals.itemCount, "item")}, total ${money(order.totals.total)}.`,
     `Arriving ${order.window.label} at ${formatAddress(order.address)}. ${order.shopper} will shop the order.`,
     "Track it with get_order_status.",
-  ].join("\n");
+    staplesNudge(ctx, order),
+  ].filter(Boolean).join("\n");
 }
 
 export function getOrderStatus({ order_number } = {}, ctx) {

@@ -8,6 +8,13 @@ export const appStore = createAppStore({
   storage: typeof window === "undefined" ? undefined : window.localStorage,
 });
 
+// The store is a singleton wired to window and localStorage. Hot-swapping it
+// would leave the old copy alive inside memoized hooks, saving stale state over
+// the new one's, so an edit anywhere under this module reloads the page instead.
+if (import.meta.hot) {
+  import.meta.hot.accept(() => window.location.reload());
+}
+
 export const useApp = (selector) => useStore(appStore, selector);
 
 /** The store the shopper last opened, or null on a first visit. */

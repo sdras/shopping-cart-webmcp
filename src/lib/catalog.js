@@ -107,3 +107,34 @@ export function findDepartment(nameOrId) {
     null
   );
 }
+
+/**
+ * In-stock stand-ins for a product, best first. A candidate has to be the same
+ * kind of thing: it shares a word of the name, or a leading keyword (the first
+ * keyword says what a product *is*; later ones only say what it goes with, and
+ * nobody wants limes because they're out of avocados).
+ */
+export function similarProducts(store, product, limit = 3) {
+  const nameTokens = tokens(product.name);
+  const keywordTokens = tokens(product.keywords);
+
+  return index
+    .filter(({ product: other }) => other.id !== product.id && other.department === product.department && inStockAt(store, other))
+    .map(({ product: other, nameTokens: otherName }) => {
+      const otherKeywords = tokens(other.keywords);
+      const sharedNames = otherName.filter((t) => nameTokens.includes(t)).length;
+      const sharedKeywords = otherKeywords.filter((t) => keywordTokens.includes(t) || nameTokens.includes(t)).length;
+      const leading =
+        (keywordTokens[0] && [...otherKeywords, ...otherName].includes(keywordTokens[0])) ||
+        (otherKeywords[0] && [...keywordTokens, ...nameTokens].includes(otherKeywords[0]));
+      if (!sharedNames && !leading) return null;
+
+      const sharedTags = other.tags.filter((t) => product.tags.includes(t)).length;
+      const priceGap = Math.abs(other.price - product.price) / Math.max(other.price, product.price);
+      return { product: other, score: sharedNames * 3 + sharedKeywords * 2 + sharedTags * 0.5 - priceGap };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((entry) => entry.product);
+}

@@ -2,6 +2,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import Header from "./components/Header.jsx";
 import CartDrawer from "./components/CartDrawer.jsx";
 import ProductDialog from "./components/ProductDialog.jsx";
+import SubstituteDialog from "./components/SubstituteDialog.jsx";
 import Toasts from "./components/Toasts.jsx";
 import AgentPanel from "./components/AgentPanel.jsx";
 import ShoppingTools from "./tools/ShoppingTools.jsx";
@@ -9,6 +10,7 @@ import CheckoutTools from "./tools/CheckoutTools.jsx";
 import StoresPage from "./pages/StoresPage.jsx";
 import StorefrontPage from "./pages/StorefrontPage.jsx";
 import CheckoutPage from "./pages/CheckoutPage.jsx";
+import StaplesPage from "./pages/StaplesPage.jsx";
 import OrdersPage from "./pages/OrdersPage.jsx";
 import OrderPage from "./pages/OrderPage.jsx";
 
@@ -35,6 +37,8 @@ export default function App() {
         <Route path="/" element={<StoresPage />} />
         <Route path="/store/:storeId" element={<StorefrontPage />} />
         <Route path="/store/:storeId/checkout" element={<CheckoutPage />} />
+        <Route path="/usuals" element={<StaplesPage />} />
+        <Route path="/staples" element={<StaplesPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderPage />} />
         <Route path="*" element={<NotFound />} />
@@ -47,6 +51,7 @@ export default function App() {
       </footer>
       <CartDrawer />
       <ProductDialog />
+      <SubstituteDialog />
       <Toasts />
       <AgentPanel />
     </>

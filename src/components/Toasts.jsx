@@ -1,4 +1,4 @@
-import { uiStore } from "../state/uiStore.js";
+import { uiStore, dismissToast } from "../state/uiStore.js";
 import { useStore } from "../state/createStore.js";
 
 export default function Toasts() {
@@ -9,6 +9,18 @@ export default function Toasts() {
         <p key={t.id} className="toast">
           {t.agent && <span className="emoji" aria-hidden="true">🤖</span>}
           {t.message}
+          {t.action && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={() => {
+                t.action.run();
+                dismissToast(t.id);
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
         </p>
       ))}
     </div>

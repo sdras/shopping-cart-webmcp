@@ -2,6 +2,8 @@ import { useNavigate } from "react-router-dom";
 import Dialog from "./Dialog.jsx";
 import QuantityControl from "./QuantityControl.jsx";
 import { ProductTile } from "./ProductCard.jsx";
+import StartWithUsual from "./StartWithUsual.jsx";
+import { CloseIcon, BoltIcon } from "./icons.jsx";
 import { useOpenStore, useCartTotals } from "../state/app.js";
 import { uiStore, closeCart } from "../state/uiStore.js";
 import { useStore } from "../state/createStore.js";
@@ -10,18 +12,18 @@ import { money, plural } from "../lib/format.js";
 function Progress({ totals, shop }) {
   const goal = shop.freeDeliveryOver;
   const fraction = Math.min(1, totals.subtotal / goal);
-  let message = `You've unlocked free delivery 🎉`;
+  let message = "You've unlocked free delivery 🎉";
   if (totals.belowMinimumBy > 0) {
     message = `Add ${money(totals.belowMinimumBy)} to reach the ${money(shop.minimumOrder)} minimum`;
   } else if (!totals.freeDelivery) {
-    message = `Add ${money(totals.toFreeDelivery)} for free delivery`;
+    message = `${money(totals.toFreeDelivery)} away from free delivery`;
   }
   return (
     <div className="cart-progress">
-      <p>{message}</p>
       <div className="meter" role="presentation">
         <span style={{ inlineSize: `${fraction * 100}%` }} />
       </div>
+      <p>{message}</p>
     </div>
   );
 }
@@ -42,22 +44,28 @@ export default function CartDrawer() {
       {shop && totals && (
         <div className="cart-drawer-body">
           <header className="cart-header">
-            <div>
-              <h2 id="cart-title">Your cart</h2>
-              <p className="muted">
-                <span className="emoji" aria-hidden="true">{shop.emoji}</span>
-                {shop.name} · {plural(totals.itemCount, "item")}
-              </p>
-            </div>
             <button type="button" className="icon-button" onClick={closeCart} aria-label="Close cart">
-              ✕
+              <CloseIcon />
             </button>
+            <div>
+              <h2 id="cart-title">{shop.name} cart</h2>
+              <p className="muted">{plural(totals.itemCount, "item")}</p>
+            </div>
           </header>
+
+          <div className="cart-store" style={{ "--hue": shop.hue }}>
+            <span className="store-logo small" aria-hidden="true">{shop.emoji}</span>
+            <div>
+              <strong>{shop.name}</strong>
+              <p className="eta"><BoltIcon />Delivery in about {shop.eta}</p>
+            </div>
+          </div>
 
           {totals.lines.length === 0 ? (
             <div className="empty-state">
               <p className="empty-emoji" aria-hidden="true">🧺</p>
               <p>Your cart is empty. The bananas are right there.</p>
+              <StartWithUsual shop={shop} compact />
             </div>
           ) : (
             <>

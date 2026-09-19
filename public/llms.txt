@@ -11,6 +11,9 @@ The whole shopping journey is exposed to browser agents as WebMCP tools on `docu
 - add_to_cart: add a list of products by name
 - update_cart_item: change a quantity or remove a product
 - get_cart: read the cart, fees, and order minimum
+- get_staples: read the shopper's saved staples list
+- update_staples: save, change, or remove staples
+- add_staples_to_cart: top the cart up to the usual quantity of every staple
 - start_checkout: go to the checkout page
 - get_order_status: check on a placed order
 
@@ -23,4 +26,5 @@ The whole shopping journey is exposed to browser agents as WebMCP tools on `docu
 ## Pages
 
 - [Stores](/): choose a store
+- [Your usuals](/usuals): the saved staples list
 - [Orders](/orders): past orders and live tracking

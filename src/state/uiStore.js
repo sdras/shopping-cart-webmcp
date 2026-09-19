@@ -4,6 +4,7 @@ import { createStore } from "./createStore.js";
 export const uiStore = createStore({
   cartOpen: false,
   productId: null, // product shown in the detail dialog
+  substitutePrompt: null, // { storeId, items: [{ productId, usual }] } while asking about swaps
   toasts: [],
   toolLog: [], // most recent first
 });
@@ -14,12 +15,18 @@ export const openCart = () => uiStore.setState((s) => ({ ...s, cartOpen: true })
 export const closeCart = () => uiStore.setState((s) => ({ ...s, cartOpen: false }));
 export const showProduct = (productId) => uiStore.setState((s) => ({ ...s, productId }));
 
-export function toast(message, { agent = false } = {}) {
+export const askAboutSubstitutes = (storeId, items) =>
+  uiStore.setState((s) => ({ ...s, substitutePrompt: items.length ? { storeId, items } : null }));
+
+export function dismissToast(id) {
+  uiStore.setState((s) => ({ ...s, toasts: s.toasts.filter((t) => t.id !== id) }));
+}
+
+/** `action` is an optional { label, run } button, like Undo. Those toasts stay long enough to reach for. */
+export function toast(message, { agent = false, action } = {}) {
   const id = nextId++;
-  uiStore.setState((s) => ({ ...s, toasts: [...s.toasts, { id, message, agent }] }));
-  setTimeout(() => {
-    uiStore.setState((s) => ({ ...s, toasts: s.toasts.filter((t) => t.id !== id) }));
-  }, 3500);
+  uiStore.setState((s) => ({ ...s, toasts: [...s.toasts, { id, message, agent, action }] }));
+  setTimeout(() => dismissToast(id), action ? 9000 : 3500);
 }
 
 export function logToolCall(entry) {
