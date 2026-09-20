@@ -2,6 +2,8 @@
 
 **Basketful** is a grocery shopping demo that exposes search, cart management, and checkout through [WebMCP](https://github.com/webmachinelearning/webmcp) ([explainer](https://webmcp-demo-sdras.netlify.app/)). Users can interact through the website or through an agent calling the site's tools. The demo illustrates how both interfaces share application state and shopping logic. Orders are simulated; no payment or delivery occurs.
 
+[Open the live demo](https://shopping-webmcp-demo.netlify.app/).
+
 ![Basketful grocery shopping demo](basketful-demo.png)
 
 ## Run it
