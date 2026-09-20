@@ -1,13 +1,9 @@
-# shopping-cart-webmcp
+# Shopping Cart WebMCP Demo
 
-**Basketful** is a grocery delivery demo (think Instacart, with made-up stores) where the whole
-shopping journey is exposed to browser agents through [WebMCP](https://github.com/webmachinelearning/webmcp).
-A person can click through it like any shop. An agent can do the same trip with fourteen tools and
-never touch the DOM.
+**Basketful** is a grocery delivery demo, where the shopping journey is exposed to browser agents through [WebMCP](https://github.com/webmachinelearning/webmcp), ([explainer](https://webmcp-demo-sdras.netlify.app/)).
+A person can click through it like any shop. An agent can do the same trip with voice activation, and tools that activate actions and flows in the shop.
 
-Pick a store → search → fill a cart → choose a delivery window → place the order → watch it arrive.
-
-Nothing is charged and nobody is coming with your groceries.
+It's just a demo, nothing is charged and nobody's coming with your groceries. Created for education and inspiration.
 
 ## Run it
 
@@ -17,11 +13,15 @@ npm run dev
 ```
 
 To let an agent drive, use Chrome 149+ with `chrome://flags/#enable-webmcp-testing` (add
-`#devtools-webmcp-support` for the DevTools pane). Without WebMCP the site still works; the tools
-are a progressive enhancement.
+`#devtools-webmcp-support` for the DevTools pane). Without WebMCP the site still works, you can think of the tools
+like a progressive enhancement.
+
+Then pop open the "Ask or Say" in the bottom left corner and put in a Gemini API key.
+
+You can also test this out with Jev! I made a [Chrome Extension](https://github.com/sdras/jev-webmcp-extension) so you can see how Jev and WebMCP interact, it's a slightly different mental model!
 
 The 🤖 **Agent tools** pill in the bottom corner lists what's registered on the current page and
-logs every call with its input and output.
+logs each call with its input and output.
 
 ## The tools
 
@@ -83,7 +83,7 @@ The site nudges an agent at the same moments it nudges a person: `place_order` m
 purchases that aren't staples yet, and `add_staples_to_cart` reports a rule-less out-of-stock item
 with its closest matches and how to save the answer (`update_staples` → `if_out_of_stock`).
 
-## Recipes, with a memory of your kitchen
+## Recipes, with a memory of what's in the users pantry
 
 Adding a recipe isn't "add nine things". For each ingredient the planner (`src/lib/recipes.js`)
 decides, and says why:
@@ -95,10 +95,10 @@ decides, and says why:
 | ask | bought recently enough that it might still be there | "Bought 5 days ago. Still have it?" |
 | add | never bought, **or bought so long ago it must be gone** | "Last bought 2 weeks ago, keeps about 7 days: assuming it's gone." |
 
-Every guess is one tap to correct ("I have this", "I'm out"), and corrections are remembered
+Every guess takes a tap to correct ("I have this", "I'm out"), and corrections are remembered
 until the thing is bought again. Shelf lives and "lasts many uses" live with the products.
 
-**Dedup is a sync, not an add.** Each recipe records what it *uses* and what it *added*. Applying
+**Dedup is included.** Each recipe records what it *uses* and what it *added*. Applying
 a recipe takes its old additions out before putting the new plan in, so applying twice, or again
 with different answers, never doubles anything. Bags and jars are shared between recipes (one
 bunch of cilantro does tacos and guacamole); things sold one at a time are counted (two recipes
@@ -117,8 +117,7 @@ Pantry memory needs a past, so the recipe pages offer a one-click **sample order
 
 ## Skills + WebMCP: your list, the site's tools
 
-`skills/grocery-staples/` is an [Agent Skill](https://docs.claude.com/en/docs/claude-code/skills)
-that pairs with the site. The split is the point:
+`skills/grocery-staples/` is an Agent Skill that pairs with the site. The split is the point:
 
 - **The list belongs to the person.** `staples.md` holds what they buy, how many, and what to do
   when something's out ("Oat Milk ×2. Barista is fine. Never almond."). It travels with them, not
@@ -127,12 +126,7 @@ that pairs with the site. The split is the point:
   `choose_store` → `update_staples` (sync the list, with each row's out-of-stock note as a rule)
   → `add_staples_to_cart` (swaps and skips happen here) → `get_cart`, and stops at the cart.
 
-Claude Code has no built-in WebMCP client, so the skill ships a small bridge,
-`scripts/webmcp-bridge.js`. Run it in the page with the Chrome extension's `javascript_tool` and
-you get `__webmcp.list()`, `.describe(name)`, and `.call(name, args)` over `document.modelContext`,
-with long results paged. `references/calling-webmcp-tools.md` has the API details and the traps.
-
-Install it, edit the list, then say "add my staples":
+Install it, edit the list, then say "add my staples" (example):
 
 ```bash
 cp -R skills/grocery-staples ~/.claude/skills/
@@ -144,34 +138,16 @@ Because the list is synced into the site, the person can also hit **Add all to c
 
 ## The assistant that lives on the page
 
-Not everyone shows up with an agent, so the site brings one. **Ask or say…** in the bottom-left
+Not everyone shows up with an agent, so the site also brings one. **Ask or say…** in the bottom-left
 corner (or ⌘J) opens voice and chat: a [Gemini Live](https://ai.google.dev/gemini-api/docs/live)
 session that hears, speaks, types, and shops. It needs a Gemini API key, which stays in this
 browser under its own localStorage entry, apart from the cart, where no tool can read it.
 
-It has no tools of its own, and that's the point:
-
-- **One registry, two kinds of agent.** `useTool` puts every tool it registers with WebMCP into a
-  page-side registry too, under the same conditions. The assistant declares and calls what's in
-  there, so it can do exactly what a browser agent could do on this page right now, in any
-  browser, flag or no flag. A new tool shows up in the assistant without anyone telling it.
-- **Checkout tools still come and go.** A Live session declares its functions once, so the three
-  checkout tools are always declared, and calling one from the wrong page comes back as "only
-  works on the checkout page. Call start_checkout first." The delivery window drops its `enum`
-  there: a session can outlast the clock.
-- **The address form stays a form.** The assistant's `set_delivery_address` types into the same
-  fields and goes through the same save as a person or a WebMCP agent, so you watch it fill in.
-- **Receipts, with Undo.** Every call lands in the conversation as a one-line receipt that opens
-  to show what the model actually read. If the call changed the cart, staples, address, or
-  checkout options, the receipt offers Undo until something else changes, and the model is told
-  its work was taken back. An order that was placed stays placed.
-- **The page still shows the work.** Its calls navigate, open the drawer, raise toasts, and show
-  up under 🤖 **Agent tools** like anyone else's. On a wide window the panel sits beside the shop
-  rather than on top of it.
+It has no tools of its own by design.
 
 The voice visualizer is one three.js quad with everything in the fragment shader: four
 translucent layers of mirrored wave, tapering to a centre line, in greens through to carrot. It
-draws what it hears. An `AnalyserNode` on the microphone or the speaker is cut into eight voice
+responds to voice. An `AnalyserNode` on the microphone or the speaker is cut into eight voice
 bands, low in the middle and high at the tips, so a vowel swells the centre and an "s" flickers
 at the ends; with nothing to hear it breathes (idle) or ripples outward (thinking). three.js only
 loads when the panel first opens. The launcher is the same picture as plain SVG, which also
@@ -230,8 +206,5 @@ const tools = await document.modelContext.getTools();
 const search = tools.find((t) => t.name === "search_products");
 await document.modelContext.executeTool(search, JSON.stringify({ query: "tortillas" }));
 ```
-
-Orders move through their stages on a demo clock: placed → shopping (15s) → out for delivery (45s)
-→ delivered (90s).
 
 Requires Node 20+.
