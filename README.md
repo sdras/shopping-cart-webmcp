@@ -1,9 +1,8 @@
 # Shopping Cart WebMCP Demo
 
-**Basketful** is a grocery delivery demo, where the shopping journey is exposed to browser agents through [WebMCP](https://github.com/webmachinelearning/webmcp), ([explainer](https://webmcp-demo-sdras.netlify.app/)).
-A person can click through it like any shop. An agent can do the same trip with voice activation, and tools that activate actions and flows in the shop.
+**Basketful** is a grocery shopping demo that exposes search, cart management, and checkout through [WebMCP](https://github.com/webmachinelearning/webmcp) ([explainer](https://webmcp-demo-sdras.netlify.app/)). Users can interact through the website or through an agent calling the site's tools. The demo illustrates how both interfaces share application state and shopping logic. Orders are simulated; no payment or delivery occurs.
 
-It's just a demo, nothing is charged and nobody's coming with your groceries. Created for education and inspiration.
+![Basketful grocery shopping demo](basketful-demo.png)
 
 ## Run it
 
@@ -12,13 +11,12 @@ npm install
 npm run dev
 ```
 
-To let an agent drive, use Chrome 149+ with `chrome://flags/#enable-webmcp-testing` (add
-`#devtools-webmcp-support` for the DevTools pane). Without WebMCP the site still works, you can think of the tools
-like a progressive enhancement.
+To enable WebMCP, use Chrome 149+ with `chrome://flags/#enable-webmcp-testing` (add
+`#devtools-webmcp-support` for the DevTools pane). The site also works without WebMCP.
 
-Then pop open the "Ask or Say" in the bottom left corner and put in a Gemini API key.
+To use the built-in assistant, open “Ask or Say” in the bottom-left corner and enter a Gemini API key.
 
-You can also test this out with Jev! I made a [Chrome Extension](https://github.com/sdras/jev-webmcp-extension) so you can see how Jev and WebMCP interact, it's a slightly different mental model!
+The [Jev Chrome extension](https://github.com/sdras/jev-webmcp-extension) provides another way to interact with the site's WebMCP tools, predicting tool calls and arguments as you type.
 
 The 🤖 **Agent tools** pill in the bottom corner lists what's registered on the current page and
 logs each call with its input and output.
@@ -42,63 +40,56 @@ logs each call with its input and output.
 | `set_delivery_options` | checkout | Delivery window, tip (`"$5"`, `"15%"`, `"none"`), replacements | |
 | `place_order` | checkout | Places the order | consequential |
 
-A few choices worth knowing about:
+Tool behavior:
 
-- **Names, not ids.** Agents refer to products by the names `search_products` returns. An
+- **Product names.** Agents refer to products by the names `search_products` returns. An
   ambiguous name ("milk") comes back with the candidates so the agent can ask the shopper.
-- **Errors tell the agent what to do next.** "No store is open yet. Call choose_store first with
+- **Error guidance.** "No store is open yet. Call choose_store first with
   one of: …", "Add $3.50 more before checking out."
-- **Partial success is reported, not hidden.** `add_to_cart` says what went in and why the rest
+- **Partial results.** `add_to_cart` says what went in and why the rest
   didn't (out of stock, not found, ambiguous).
-- **Checkout tools are dynamic.** `set_delivery_options` and `place_order` only exist while the
+- **Dynamic checkout tools.** `set_delivery_options` and `place_order` only exist while the
   checkout page is showing an orderable cart. The delivery window `enum` is rebuilt as the clock moves.
-- **The page shows what the agent is doing.** Searches navigate, `get_cart` opens the drawer,
+- **Visible tool actions.** Searches navigate, `get_cart` opens the drawer,
   adds raise a toast, and a tool only reports back after the page has painted.
-- **"The usual" is idempotent.** `add_staples_to_cart` tops the cart up to each staple's usual
-  quantity instead of adding it again, so an agent that retries, or a person who taps "Add all"
-  twice, doesn't end up with twelve bananas. It reports what it added, what was already there, and
-  what's out of stock with a nudge toward `search_products` for a substitute.
-- **A tool must outlive its own call.** `place_order` empties the cart, which is exactly what
-  disables it. Unregistering mid-call loses the result (Chrome < 153), so `useTool` keeps a tool
+- **Idempotent cart top-up.** `add_staples_to_cart` tops the cart up to each staple's usual
+  quantity instead of adding it again, so repeated calls or clicks on "Add all" do not duplicate quantities. It reports what it added, what was already there, and
+  what's out of stock with guidance to use `search_products` for a substitute.
+- **Tool registration during execution.** `place_order` empties the cart, which also disables the tool. Unregistering mid-call loses the result (Chrome < 153), so `useTool` keeps a tool
   registered until its call has reported back, and the checkout tools mount at the app root.
 
-## Usuals: staples nobody has to author
+## Saved staples and repeat purchases
 
-Tools call them staples; the page calls them "Your usuals". The flow is built so a person never
-sits down to make a list:
+The tools refer to saved repeat purchases as staples; the page labels them “Your usuals”.
+Users can build this list from their order history:
 
-1. **After an order**, the confirmation page asks "Buy any of these every time?" with the items
-   as tappable chips, quantities as bought, things ordered before already selected. The cart they
-   just built is the list.
-2. **Once there's history**, `/usuals` offers "You keep buying these" with a one-tap yes and a no
-   that stays no.
-3. **The payoff**: an empty cart opens with "Start with your usual? 20 items, about $85" and one
-   button. The toast says what happened and offers Undo.
-4. **Out-of-stock rules accrue from decisions, not forms.** When a usual is out: swap it for the
-   closest match *just today*, *always*, or *skip it when it's out*. "Always" and "skip" become
-   rules the next top-up follows on its own. Stand-ins have to be the same kind of thing
-   (`similarProducts`); when nothing is, it says so instead of offering limes for avocados.
+1. **Order confirmation.** The confirmation page offers purchased items as selectable staples, using the quantities from the order and preselecting items ordered previously.
+2. **Purchase history.** The `/usuals` page suggests frequently purchased items. Users can accept or dismiss suggestions, and dismissals are remembered.
+3. **Cart top-up.** An empty cart offers to add saved staples, showing the item count and estimated cost. The resulting notification includes an Undo action.
+4. **Out-of-stock preferences.** Users can choose a substitute for one order, save it for future orders, or skip the item when unavailable. Substitutes are restricted to similar products (`similarProducts`); the site reports when no suitable substitute is available.
 
-The site nudges an agent at the same moments it nudges a person: `place_order` mentions repeat
-purchases that aren't staples yet, and `add_staples_to_cart` reports a rule-less out-of-stock item
-with its closest matches and how to save the answer (`update_staples` → `if_out_of_stock`).
+Agents receive corresponding information from the tools: `place_order` reports repeat
+purchases that are not yet staples, and `add_staples_to_cart` reports out-of-stock items without
+saved preferences, suggested substitutes, and instructions for saving a preference through
+`update_staples` → `if_out_of_stock`.
 
-## Recipes, with a memory of what's in the users pantry
+## Recipe planning and pantry estimates
 
-Adding a recipe isn't "add nine things". For each ingredient the planner (`src/lib/recipes.js`)
-decides, and says why:
+For each ingredient, the planner (`src/lib/recipes.js`) uses cart contents, purchase history,
+and estimated shelf life to propose an action and explain its assumptions:
 
 | Verdict | When | What it says |
 | --- | --- | --- |
-| already in the cart | it's in the basket and no other recipe has dibs on it | "Already in your cart." |
+| already in the cart | it is in the cart and has not been allocated to another recipe | "Already in your cart." |
 | have it | a cupboard item (oregano, oil, salt) bought within its shelf life | "Bought 2 months ago, keeps about 2 years." |
 | ask | bought recently enough that it might still be there | "Bought 5 days ago. Still have it?" |
-| add | never bought, **or bought so long ago it must be gone** | "Last bought 2 weeks ago, keeps about 7 days: assuming it's gone." |
+| add | no purchase history, or the purchase is older than its estimated shelf life | "Last bought 2 weeks ago, keeps about 7 days: assuming it's gone." |
 
-Every guess takes a tap to correct ("I have this", "I'm out"), and corrections are remembered
-until the thing is bought again. Shelf lives and "lasts many uses" live with the products.
+Users can correct estimates with “I have this” or “I’m out”. Corrections are retained until
+the product is purchased again. Product data includes estimated shelf life and whether an item lasts for multiple uses.
 
-**Dedup is included.** Each recipe records what it *uses* and what it *added*. Applying
+Recipe quantities are reconciled across repeated additions and shared ingredients. Each recipe
+records what it uses and what it added. Applying
 a recipe takes its old additions out before putting the new plan in, so applying twice, or again
 with different answers, never doubles anything. Bags and jars are shared between recipes (one
 bunch of cilantro does tacos and guacamole); things sold one at a time are counted (two recipes
@@ -112,17 +103,16 @@ with `already_have` / `need`; `preview: true` answers "what would I need?" witho
 cart. Loose ingredient matches are reported ("tomatoes → Tomatoes on the Vine (or Diced
 Tomatoes)") so the agent can correct them.
 
-Pantry memory needs a past, so the recipe pages offer a one-click **sample order history**
-(spices two months ago, tomatoes two weeks ago, eggs last week) and a one-click way to remove it.
+Recipe pages offer **sample order history** for testing pantry estimates
+(spices two months ago, tomatoes two weeks ago, eggs last week), with an option to remove it.
 
-## Skills + WebMCP: your list, the site's tools
+## Using an agent skill with WebMCP
 
-`skills/grocery-staples/` is an Agent Skill that pairs with the site. The split is the point:
+`skills/grocery-staples/` is an Agent Skill that stores a user's shopping preferences and applies them through the site's tools:
 
-- **The list belongs to the person.** `staples.md` holds what they buy, how many, and what to do
-  when something's out ("Oat Milk ×2. Barista is fine. Never almond."). It travels with them, not
-  with one store's localStorage.
-- **The capabilities belong to the site.** The skill never clicks through the shop. It calls
+- **Shopping preferences.** `staples.md` holds what they buy, how many, and what to do
+  when something's out ("Oat Milk ×2. Barista is fine. Never almond."). The file can be reused across stores.
+- **Site interaction.** The skill calls
   `choose_store` → `update_staples` (sync the list, with each row's out-of-stock note as a rule)
   → `add_staples_to_cart` (swaps and skips happen here) → `get_cart`, and stops at the cart.
 
@@ -136,23 +126,16 @@ $EDITOR ~/.claude/skills/grocery-staples/staples.md
 Because the list is synced into the site, the person can also hit **Add all to cart** on the
 "Your staples" shelf, and any other agent can call `add_staples_to_cart` without the skill.
 
-## The assistant that lives on the page
+## Built-in voice and chat assistant
 
-Not everyone shows up with an agent, so the site also brings one. **Ask or say…** in the bottom-left
-corner (or ⌘J) opens voice and chat: a [Gemini Live](https://ai.google.dev/gemini-api/docs/live)
-session that hears, speaks, types, and shops. It needs a Gemini API key, which stays in this
-browser under its own localStorage entry, apart from the cart, where no tool can read it.
+“Ask or say…” in the bottom-left corner (or ⌘J) opens a voice and chat assistant powered by
+[Gemini Live](https://ai.google.dev/gemini-api/docs/live). It uses the site's registered tools
+for shopping actions. The assistant requires a Gemini API key, stored in a separate localStorage
+entry in the browser and not exposed through the shopping tools.
 
-It has no tools of its own by design.
-
-The voice visualizer is one three.js quad with everything in the fragment shader: four
-translucent layers of mirrored wave, tapering to a centre line, in greens through to carrot. It
-responds to voice. An `AnalyserNode` on the microphone or the speaker is cut into eight voice
-bands, low in the middle and high at the tips, so a vowel swells the centre and an "s" flickers
-at the ends; with nothing to hear it breathes (idle) or ripples outward (thinking). three.js only
-loads when the panel first opens. The launcher is the same picture as plain SVG, which also
-stands in wherever WebGL is missing. With reduced motion the layers hold still and only a real
-voice moves them.
+The audio visualizer responds to microphone and speaker audio, loads three.js when the panel
+first opens, provides an SVG fallback when WebGL is unavailable, and disables idle animation
+when reduced motion is requested.
 
 ## How it's put together
 
@@ -160,13 +143,13 @@ voice moves them.
 src/
   data/          stores and the product catalog
   lib/           search, pricing, delivery windows (pure functions)
-  state/         a tiny external store + localStorage persistence
+  state/         external store + localStorage persistence
   tools/
     definitions.js   names, descriptions, schemas, annotations
     handlers.js      tool logic, no React, returns strings / throws ToolError
     useTool.js       wraps use-webmcp-tool: paint-then-report, logging, in-flight guard
     registry.js      the same live tools, by name, for the built-in assistant
-    addressTool.js   the address form's schema, for whoever can't read the form
+    addressTool.js   the address form's schema, for clients without access to the form
     ShoppingTools.jsx, CheckoutTools.jsx
   assistant/     voice and chat: Gemini Live client, tool runner + undo, panel, voice visualizer
   components/, pages/
@@ -199,7 +182,7 @@ npx webmcp-evals local -t path/to/evals/schema.json -e path/to/evals/evals.json
 `tests/definitions.test.js` enforces Chrome's recommended budgets: tool names ≤ 30 characters,
 descriptions ≤ 500, parameter descriptions ≤ 150.
 
-To poke a tool by hand without a model:
+To call a tool manually without a model:
 
 ```js
 const tools = await document.modelContext.getTools();
