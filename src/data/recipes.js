@@ -121,6 +121,55 @@ const rows = [
       "Pile onto toast with the bacon and a lot of pepper.",
     ],
   },
+  // Shares tomatoes, basil, garlic, and oil with the tomato pasta: add both
+  // and the second one mostly finds what it needs already in the cart.
+  {
+    id: "bruschetta",
+    name: "Tomato & Basil Bruschetta",
+    emoji: "🍅",
+    minutes: 15,
+    serves: 4,
+    blurb: "Toast, rubbed with garlic, buried in tomatoes. The whole trick is salt.",
+    ingredients: [
+      ["baguette", 1, "1, sliced on the diagonal"],
+      ["tomato-vine", 1, "4 ripe tomatoes, diced"],
+      ["garlic", 1, "1 clove, halved"],
+      ["basil", 1, "a handful, torn"],
+      ["olive-oil", 1, "3 tbsp"],
+      ["sea-salt", 1, "more than you think"],
+      ["black-pepper", 1, "to taste"],
+    ],
+    steps: [
+      "Toss the tomatoes with the oil, basil, salt, and pepper. Let them sit while you do the rest.",
+      "Toast the baguette slices until the edges char. Rub each one with the cut side of the garlic.",
+      "Spoon the tomatoes over the toast, juices and all. Eat immediately, over the sink if necessary.",
+    ],
+  },
+  // Built from things people keep as usuals (bananas, eggs, oat milk), so it
+  // shows a recipe finding its ingredients in a cart the usuals already filled.
+  {
+    id: "banana-oat-pancakes",
+    name: "Banana Oat Pancakes",
+    emoji: "🥞",
+    minutes: 20,
+    serves: 2,
+    blurb: "Everything goes in the blender. No flour, no bowl, no regrets.",
+    ingredients: [
+      ["oats", 1, "2 cups"],
+      ["banana-organic", 2, "2 very ripe"],
+      ["eggs-pasture", 1, "2 eggs"],
+      ["oat-milk", 1, "1 cup"],
+      ["honey", 1, "a drizzle, plus more to serve"],
+      ["butter", 1, "for the pan"],
+      ["blueberries", 1, "a handful"],
+      ["sea-salt", 1, "a pinch"],
+    ],
+    steps: [
+      "Blend the oats, bananas, eggs, oat milk, honey, and salt until smooth. Rest the batter 5 minutes to thicken.",
+      "Melt a little butter in a pan over medium heat. Pour small pancakes and dot each with blueberries.",
+      "Flip when the edges set and bubbles stay open. Stack, drizzle with honey, and don't share.",
+    ],
+  },
 ];
 
 export const recipes = rows.map((recipe) => ({

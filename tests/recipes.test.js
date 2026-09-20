@@ -10,7 +10,7 @@ import {
 } from "../src/state/appStore.js";
 import { storesById } from "../src/data/stores.js";
 import { productsById } from "../src/data/products.js";
-import { recipesById } from "../src/data/recipes.js";
+import { recipes, recipesById } from "../src/data/recipes.js";
 import { planRecipe, pantryVerdict, matchIngredient, parseIngredientLine, buildCustomRecipe } from "../src/lib/recipes.js";
 import * as tools from "../src/tools/handlers.js";
 
@@ -155,6 +155,68 @@ describe("planRecipe", () => {
     const penny = storesById.penny; // salmon is out at Penny Pantry
     const plan = planRecipe(penny, store.getState(), recipesById["sheet-pan-salmon"], { now: NOW });
     expect(plan.lines.find((l) => l.product.id === "salmon").status).toBe("out_of_stock");
+  });
+});
+
+describe("the recipe book", () => {
+  it("only calls for things the catalog sells, and every recipe can be cooked from its page", () => {
+    for (const recipe of recipes) {
+      for (const ingredient of recipe.ingredients) {
+        expect(productsById[ingredient.productId], `${recipe.id}: ${ingredient.productId}`).toBeDefined();
+        expect(ingredient.quantity).toBeGreaterThan(0);
+        expect(ingredient.amount).toBeTruthy();
+      }
+      expect(recipe.steps.length).toBeGreaterThan(1);
+    }
+    expect(new Set(recipes.map((r) => r.id)).size).toBe(recipes.length);
+  });
+
+  it("bruschetta after the tomato pasta mostly finds what it needs in the cart", () => {
+    const store = kitchen();
+    applyRecipePlan(store, shop, pasta, planRecipe(shop, store.getState(), pasta, { now: NOW }));
+
+    const plan = planRecipe(shop, store.getState(), recipesById.bruschetta, { now: NOW });
+    expect(statuses(plan)).toEqual({
+      baguette: "add", // the one new thing
+      "tomato-vine": "in_cart", // the pasta's tomatoes
+      basil: "in_cart", // the pasta's basil
+      garlic: "ask",
+      "olive-oil": "have",
+      "sea-salt": "have",
+      "black-pepper": "have",
+    });
+    expect(plan.itemCount).toBe(1);
+  });
+
+  it("on its own, bruschetta tells the old-tomatoes story", () => {
+    const plan = planRecipe(shop, kitchen().getState(), recipesById.bruschetta, { now: NOW });
+    expect(plan.lines.find((l) => l.product.id === "tomato-vine")).toMatchObject({
+      status: "add",
+      why: "expired",
+      reason: "last bought 2 weeks ago, keeps about 7 days: assuming it's gone",
+    });
+  });
+
+  it("pancakes find the usuals already in the basket", () => {
+    const store = kitchen();
+    // What "Add my usuals" leaves in the cart.
+    for (const [id, quantity] of Object.entries({ "banana-organic": 6, "eggs-pasture": 1, "oat-milk": 2 })) {
+      setQuantity(store, shop.id, id, quantity);
+    }
+    const plan = planRecipe(shop, store.getState(), recipesById["banana-oat-pancakes"], { now: NOW });
+    expect(statuses(plan)).toEqual({
+      oats: "add",
+      "banana-organic": "in_cart",
+      "eggs-pasture": "in_cart",
+      "oat-milk": "in_cart",
+      honey: "add",
+      butter: "ask", // bought 5 days ago
+      blueberries: "add",
+      "sea-salt": "have",
+    });
+
+    applyRecipePlan(store, shop, recipesById["banana-oat-pancakes"], plan);
+    expect(cartOf(store)).toMatchObject({ "banana-organic": 6, "eggs-pasture": 1, "oat-milk": 2, oats: 1, honey: 1, blueberries: 1 });
   });
 });
 
